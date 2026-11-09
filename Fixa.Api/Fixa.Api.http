@@ -1,0 +1,19 @@
+@Fixa.Api_HostAddress = http://localhost:5112
+
+### Tipos de incidencia de una categoría
+GET {{Fixa.Api_HostAddress}}/api/v1/publico/categorias/bache/tipos
+Accept: application/json
+
+###
+GET {{Fixa.Api_HostAddress}}/api/v1/publico/categorias/alumbrado/tipos
+Accept: application/json
+
+###
+GET {{Fixa.Api_HostAddress}}/api/v1/publico/categorias/residuos/tipos
+Accept: application/json
+
+### Categoría inexistente → 404
+GET {{Fixa.Api_HostAddress}}/api/v1/publico/categorias/xyz/tipos
+Accept: application/json
+
+###

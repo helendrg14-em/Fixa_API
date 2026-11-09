@@ -16,37 +16,37 @@ public partial class FixaDbContext : DbContext
 
     public virtual DbSet<Categoria> Categorias { get; set; }
 
-    public virtual DbSet<ContadoresCodigo> ContadoresCodigos { get; set; }
+    public virtual DbSet<ContadorCodigo> ContadoresCodigo { get; set; }
 
     public virtual DbSet<Cuadrilla> Cuadrillas { get; set; }
 
-    public virtual DbSet<Derivacione> Derivaciones { get; set; }
+    public virtual DbSet<Derivacion> Derivaciones { get; set; }
 
     public virtual DbSet<Distrito> Distritos { get; set; }
 
-    public virtual DbSet<EntidadesExterna> EntidadesExternas { get; set; }
+    public virtual DbSet<EntidadExterna> EntidadesExternas { get; set; }
 
-    public virtual DbSet<EventosHistorial> EventosHistorials { get; set; }
+    public virtual DbSet<EventoHistorial> EventosHistorial { get; set; }
 
     public virtual DbSet<Evidencia> Evidencias { get; set; }
 
     public virtual DbSet<Feriado> Feriados { get; set; }
 
-    public virtual DbSet<FotosReporte> FotosReportes { get; set; }
+    public virtual DbSet<FotoReporte> FotosReporte { get; set; }
 
-    public virtual DbSet<Intervencione> Intervenciones { get; set; }
+    public virtual DbSet<Intervencion> Intervenciones { get; set; }
 
-    public virtual DbSet<MetasAtencion> MetasAtencions { get; set; }
+    public virtual DbSet<MetaAtencion> MetasAtencion { get; set; }
 
-    public virtual DbSet<Notificacione> Notificaciones { get; set; }
+    public virtual DbSet<Notificacion> Notificaciones { get; set; }
 
-    public virtual DbSet<Programacione> Programaciones { get; set; }
+    public virtual DbSet<Programacion> Programaciones { get; set; }
 
     public virtual DbSet<Reporte> Reportes { get; set; }
 
-    public virtual DbSet<SolicitudesRevision> SolicitudesRevisions { get; set; }
+    public virtual DbSet<SolicitudRevision> SolicitudesRevision { get; set; }
 
-    public virtual DbSet<UnidadesResponsable> UnidadesResponsables { get; set; }
+    public virtual DbSet<UnidadResponsable> UnidadesResponsables { get; set; }
 
     public virtual DbSet<Usuario> Usuarios { get; set; }
 
@@ -130,13 +130,13 @@ public partial class FixaDbContext : DbContext
             entity.Property(e => e.RadioCercaniaM).HasColumnName("radio_cercania_m");
             entity.Property(e => e.UnidadId).HasColumnName("unidad_id");
 
-            entity.HasOne(d => d.Unidad).WithMany(p => p.Categoria)
+            entity.HasOne(d => d.Unidad).WithMany(p => p.Categorias)
                 .HasForeignKey(d => d.UnidadId)
                 .OnDelete(DeleteBehavior.Restrict)
                 .HasConstraintName("categorias_unidad_id_foreign");
         });
 
-        modelBuilder.Entity<ContadoresCodigo>(entity =>
+        modelBuilder.Entity<ContadorCodigo>(entity =>
         {
             entity.HasKey(e => e.Anio).HasName("contadores_codigo_pkey");
 
@@ -171,7 +171,7 @@ public partial class FixaDbContext : DbContext
                 .HasConstraintName("cuadrillas_unidad_id_foreign");
         });
 
-        modelBuilder.Entity<Derivacione>(entity =>
+        modelBuilder.Entity<Derivacion>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("derivaciones_pkey");
 
@@ -236,7 +236,7 @@ public partial class FixaDbContext : DbContext
             entity.Property(e => e.Numero).HasColumnName("numero");
         });
 
-        modelBuilder.Entity<EntidadesExterna>(entity =>
+        modelBuilder.Entity<EntidadExterna>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("entidades_externas_pkey");
 
@@ -251,7 +251,7 @@ public partial class FixaDbContext : DbContext
                 .HasColumnName("nombre");
         });
 
-        modelBuilder.Entity<EventosHistorial>(entity =>
+        modelBuilder.Entity<EventoHistorial>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("eventos_historial_pkey");
 
@@ -280,12 +280,12 @@ public partial class FixaDbContext : DbContext
                 .HasColumnName("tipo");
             entity.Property(e => e.UsuarioId).HasColumnName("usuario_id");
 
-            entity.HasOne(d => d.Caso).WithMany(p => p.EventosHistorials)
+            entity.HasOne(d => d.Caso).WithMany(p => p.EventosHistorial)
                 .HasForeignKey(d => d.CasoId)
                 .OnDelete(DeleteBehavior.Restrict)
                 .HasConstraintName("eventos_historial_caso_id_foreign");
 
-            entity.HasOne(d => d.Usuario).WithMany(p => p.EventosHistorials)
+            entity.HasOne(d => d.Usuario).WithMany(p => p.EventosHistorial)
                 .HasForeignKey(d => d.UsuarioId)
                 .OnDelete(DeleteBehavior.Restrict)
                 .HasConstraintName("eventos_historial_usuario_id_foreign");
@@ -311,7 +311,7 @@ public partial class FixaDbContext : DbContext
                 .HasMaxLength(500)
                 .HasColumnName("url");
 
-            entity.HasOne(d => d.Intervencion).WithMany(p => p.Evidencia)
+            entity.HasOne(d => d.Intervencion).WithMany(p => p.Evidencias)
                 .HasForeignKey(d => d.IntervencionId)
                 .OnDelete(DeleteBehavior.Restrict)
                 .HasConstraintName("evidencias_intervencion_id_foreign");
@@ -335,7 +335,7 @@ public partial class FixaDbContext : DbContext
                 .HasColumnName("nombre");
         });
 
-        modelBuilder.Entity<FotosReporte>(entity =>
+        modelBuilder.Entity<FotoReporte>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("fotos_reporte_pkey");
 
@@ -356,13 +356,13 @@ public partial class FixaDbContext : DbContext
                 .HasMaxLength(500)
                 .HasColumnName("url");
 
-            entity.HasOne(d => d.Reporte).WithMany(p => p.FotosReportes)
+            entity.HasOne(d => d.Reporte).WithMany(p => p.FotosReporte)
                 .HasForeignKey(d => d.ReporteId)
                 .OnDelete(DeleteBehavior.Restrict)
                 .HasConstraintName("fotos_reporte_reporte_id_foreign");
         });
 
-        modelBuilder.Entity<Intervencione>(entity =>
+        modelBuilder.Entity<Intervencion>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("intervenciones_pkey");
 
@@ -393,18 +393,18 @@ public partial class FixaDbContext : DbContext
                 .OnDelete(DeleteBehavior.Restrict)
                 .HasConstraintName("intervenciones_caso_id_foreign");
 
-            entity.HasOne(d => d.Supervisor).WithMany(p => p.IntervencioneSupervisors)
+            entity.HasOne(d => d.Supervisor).WithMany(p => p.IntervencionesComoSupervisor)
                 .HasForeignKey(d => d.SupervisorId)
                 .OnDelete(DeleteBehavior.Restrict)
                 .HasConstraintName("intervenciones_supervisor_id_foreign");
 
-            entity.HasOne(d => d.Tecnico).WithMany(p => p.IntervencioneTecnicos)
+            entity.HasOne(d => d.Tecnico).WithMany(p => p.IntervencionesComoTecnico)
                 .HasForeignKey(d => d.TecnicoId)
                 .OnDelete(DeleteBehavior.Restrict)
                 .HasConstraintName("intervenciones_tecnico_id_foreign");
         });
 
-        modelBuilder.Entity<MetasAtencion>(entity =>
+        modelBuilder.Entity<MetaAtencion>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("metas_atencion_pkey");
 
@@ -422,13 +422,13 @@ public partial class FixaDbContext : DbContext
             entity.Property(e => e.VigenteDesde).HasColumnName("vigente_desde");
             entity.Property(e => e.VigenteHasta).HasColumnName("vigente_hasta");
 
-            entity.HasOne(d => d.Categoria).WithMany(p => p.MetasAtencions)
+            entity.HasOne(d => d.Categoria).WithMany(p => p.MetasAtencion)
                 .HasForeignKey(d => d.CategoriaId)
                 .OnDelete(DeleteBehavior.Restrict)
                 .HasConstraintName("metas_atencion_categoria_id_foreign");
         });
 
-        modelBuilder.Entity<Notificacione>(entity =>
+        modelBuilder.Entity<Notificacion>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("notificaciones_pkey");
 
@@ -465,7 +465,7 @@ public partial class FixaDbContext : DbContext
                 .HasConstraintName("notificaciones_reporte_id_foreign");
         });
 
-        modelBuilder.Entity<Programacione>(entity =>
+        modelBuilder.Entity<Programacion>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("programaciones_pkey");
 
@@ -583,7 +583,7 @@ public partial class FixaDbContext : DbContext
                 .HasConstraintName("reportes_operador_id_foreign");
         });
 
-        modelBuilder.Entity<SolicitudesRevision>(entity =>
+        modelBuilder.Entity<SolicitudRevision>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("solicitudes_revision_pkey");
 
@@ -609,18 +609,18 @@ public partial class FixaDbContext : DbContext
             entity.Property(e => e.Respuesta).HasColumnName("respuesta");
             entity.Property(e => e.SupervisorId).HasColumnName("supervisor_id");
 
-            entity.HasOne(d => d.Reporte).WithMany(p => p.SolicitudesRevisions)
+            entity.HasOne(d => d.Reporte).WithMany(p => p.SolicitudesRevision)
                 .HasForeignKey(d => d.ReporteId)
                 .OnDelete(DeleteBehavior.Restrict)
                 .HasConstraintName("solicitudes_revision_reporte_id_foreign");
 
-            entity.HasOne(d => d.Supervisor).WithMany(p => p.SolicitudesRevisions)
+            entity.HasOne(d => d.Supervisor).WithMany(p => p.SolicitudesRevision)
                 .HasForeignKey(d => d.SupervisorId)
                 .OnDelete(DeleteBehavior.Restrict)
                 .HasConstraintName("solicitudes_revision_supervisor_id_foreign");
         });
 
-        modelBuilder.Entity<UnidadesResponsable>(entity =>
+        modelBuilder.Entity<UnidadResponsable>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("unidades_responsables_pkey");
 

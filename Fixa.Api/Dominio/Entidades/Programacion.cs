@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Fixa.Api.Dominio.Entidades;
 
-public partial class Programacione
+public partial class Programacion
 {
     public long Id { get; set; }
 

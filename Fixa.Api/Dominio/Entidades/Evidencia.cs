@@ -15,5 +15,5 @@ public partial class Evidencia
 
     public string? Descripcion { get; set; }
 
-    public virtual Intervencione Intervencion { get; set; } = null!;
+    public virtual Intervencion Intervencion { get; set; } = null!;
 }

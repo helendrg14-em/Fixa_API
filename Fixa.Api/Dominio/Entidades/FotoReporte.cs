@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Fixa.Api.Dominio.Entidades;
 
-public partial class FotosReporte
+public partial class FotoReporte
 {
     public long Id { get; set; }
 

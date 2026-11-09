@@ -54,11 +54,11 @@ public partial class Reporte
 
     public virtual Distrito Distrito { get; set; } = null!;
 
-    public virtual ICollection<FotosReporte> FotosReportes { get; set; } = new List<FotosReporte>();
+    public virtual ICollection<FotoReporte> FotosReporte { get; set; } = new List<FotoReporte>();
 
-    public virtual ICollection<Notificacione> Notificaciones { get; set; } = new List<Notificacione>();
+    public virtual ICollection<Notificacion> Notificaciones { get; set; } = new List<Notificacion>();
 
     public virtual Usuario? Operador { get; set; }
 
-    public virtual ICollection<SolicitudesRevision> SolicitudesRevisions { get; set; } = new List<SolicitudesRevision>();
+    public virtual ICollection<SolicitudRevision> SolicitudesRevision { get; set; } = new List<SolicitudRevision>();
 }

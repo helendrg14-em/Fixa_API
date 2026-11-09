@@ -13,9 +13,9 @@ public partial class Cuadrilla
 
     public string Turno { get; set; } = null!;
 
-    public virtual ICollection<Programacione> Programaciones { get; set; } = new List<Programacione>();
+    public virtual ICollection<Programacion> Programaciones { get; set; } = new List<Programacion>();
 
-    public virtual UnidadesResponsable Unidad { get; set; } = null!;
+    public virtual UnidadResponsable Unidad { get; set; } = null!;
 
     public virtual ICollection<Usuario> Usuarios { get; set; } = new List<Usuario>();
 }

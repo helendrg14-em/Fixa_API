@@ -29,15 +29,15 @@ public partial class Caso
 
     public virtual Categoria Categoria { get; set; } = null!;
 
-    public virtual ICollection<Derivacione> Derivaciones { get; set; } = new List<Derivacione>();
+    public virtual ICollection<Derivacion> Derivaciones { get; set; } = new List<Derivacion>();
 
-    public virtual ICollection<EventosHistorial> EventosHistorials { get; set; } = new List<EventosHistorial>();
+    public virtual ICollection<EventoHistorial> EventosHistorial { get; set; } = new List<EventoHistorial>();
 
-    public virtual ICollection<Intervencione> Intervenciones { get; set; } = new List<Intervencione>();
+    public virtual ICollection<Intervencion> Intervenciones { get; set; } = new List<Intervencion>();
 
-    public virtual ICollection<Programacione> Programaciones { get; set; } = new List<Programacione>();
+    public virtual ICollection<Programacion> Programaciones { get; set; } = new List<Programacion>();
 
     public virtual ICollection<Reporte> Reportes { get; set; } = new List<Reporte>();
 
-    public virtual UnidadesResponsable? Unidad { get; set; }
+    public virtual UnidadResponsable? Unidad { get; set; }
 }

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Fixa.Api.Dominio.Entidades;
 
-public partial class Derivacione
+public partial class Derivacion
 {
     public long Id { get; set; }
 
@@ -25,7 +25,7 @@ public partial class Derivacione
 
     public virtual Caso Caso { get; set; } = null!;
 
-    public virtual EntidadesExterna Entidad { get; set; } = null!;
+    public virtual EntidadExterna Entidad { get; set; } = null!;
 
     public virtual Usuario Responsable { get; set; } = null!;
 }

@@ -49,19 +49,19 @@ public partial class Usuario
 
     public virtual Cuadrilla? Cuadrilla { get; set; }
 
-    public virtual ICollection<Derivacione> Derivaciones { get; set; } = new List<Derivacione>();
+    public virtual ICollection<Derivacion> Derivaciones { get; set; } = new List<Derivacion>();
 
     public virtual Distrito? Distrito { get; set; }
 
-    public virtual ICollection<EventosHistorial> EventosHistorials { get; set; } = new List<EventosHistorial>();
+    public virtual ICollection<EventoHistorial> EventosHistorial { get; set; } = new List<EventoHistorial>();
 
-    public virtual ICollection<Intervencione> IntervencioneSupervisors { get; set; } = new List<Intervencione>();
+    public virtual ICollection<Intervencion> IntervencionesComoSupervisor { get; set; } = new List<Intervencion>();
 
-    public virtual ICollection<Intervencione> IntervencioneTecnicos { get; set; } = new List<Intervencione>();
+    public virtual ICollection<Intervencion> IntervencionesComoTecnico { get; set; } = new List<Intervencion>();
 
     public virtual ICollection<Reporte> Reportes { get; set; } = new List<Reporte>();
 
-    public virtual ICollection<SolicitudesRevision> SolicitudesRevisions { get; set; } = new List<SolicitudesRevision>();
+    public virtual ICollection<SolicitudRevision> SolicitudesRevision { get; set; } = new List<SolicitudRevision>();
 
-    public virtual UnidadesResponsable? Unidad { get; set; }
+    public virtual UnidadResponsable? Unidad { get; set; }
 }

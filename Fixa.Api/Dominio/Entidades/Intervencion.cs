@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Fixa.Api.Dominio.Entidades;
 
-public partial class Intervencione
+public partial class Intervencion
 {
     public long Id { get; set; }
 
@@ -23,7 +23,7 @@ public partial class Intervencione
 
     public virtual Caso Caso { get; set; } = null!;
 
-    public virtual ICollection<Evidencia> Evidencia { get; set; } = new List<Evidencia>();
+    public virtual ICollection<Evidencia> Evidencias { get; set; } = new List<Evidencia>();
 
     public virtual Usuario? Supervisor { get; set; }
 

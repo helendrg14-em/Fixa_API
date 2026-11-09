@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Fixa.Api.Dominio.Entidades;
 
-public partial class EventosHistorial
+public partial class EventoHistorial
 {
     public long Id { get; set; }
 
@@ -25,7 +25,7 @@ public partial class EventosHistorial
 
     public virtual Caso Caso { get; set; } = null!;
 
-    public virtual ICollection<Notificacione> Notificaciones { get; set; } = new List<Notificacione>();
+    public virtual ICollection<Notificacion> Notificaciones { get; set; } = new List<Notificacion>();
 
     public virtual Usuario? Usuario { get; set; }
 }

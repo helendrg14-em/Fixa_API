@@ -1,20 +1,27 @@
+using System.ComponentModel.DataAnnotations;
+using System.Security.Claims;
+using Fixa.Api.Dominio;
 using Fixa.Api.Infraestructura.Datos;
+using Fixa.Api.Infraestructura.Seguridad;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 
 namespace Fixa.Api.Modulos.Auth;
 
-public record SolicitudLogin(string Correo, string Password);
+public record SolicitudLogin(
+    [Required, EmailAddress, StringLength(120)] string Correo,
+    [Required, StringLength(128)] string Password);
 
 /// <summary>Login de funcionarios (R01). Usa el Singleton ServicioAutenticacion.</summary>
 [ApiController]
 [Route("api/v1/panel/auth")]
 public class AuthController(FixaDbContext db) : ControllerBase
 {
-    private static readonly TimeZoneInfo zonaBolivia = TimeZoneInfo.FindSystemTimeZoneById("America/La_Paz");
-
     // POST /api/v1/panel/auth/login
+    [AllowAnonymous]
+    [EnableRateLimiting(Limites.Login)]
     [HttpPost("login")]
     public async Task<IActionResult> Login(SolicitudLogin solicitud)
     {
@@ -22,25 +29,23 @@ public class AuthController(FixaDbContext db) : ControllerBase
         var correo = auth.NormalizarCorreo(solicitud.Correo);
         var usuario = await db.Usuarios.FirstOrDefaultAsync(u => u.Correo == correo);
 
-        // Mismo mensaje en todos los casos: no se revela si el correo existe.
-        if (usuario is null || !auth.PasswordValida(usuario, solicitud.Password) || !auth.PuedeEntrar(usuario))
-            return Unauthorized(new { mensaje = "Correo o contraseña incorrectos, o cuenta sin acceso." });
+        // Mismo mensaje en todos los casos: no se revela si el correo existe ni por qué falló.
+        if (!auth.Credenciales(usuario, solicitud.Password) || !auth.PuedeEntrar(usuario!))
+            return Problem(statusCode: StatusCodes.Status401Unauthorized, title: "Correo o contraseña incorrectos, o cuenta sin acceso.");
 
-        // Laravel guarda las fechas en hora de Bolivia.
-        usuario.UltimoAcceso = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zonaBolivia);
+        usuario!.UltimoAcceso = HoraBolivia.Ahora();
         await db.SaveChangesAsync();
 
         var (token, expira) = auth.CrearToken(usuario);
         return Ok(new { token, expira, tipo = usuario.Tipo, nombre = $"{usuario.Nombres} {usuario.Apellidos}" });
     }
 
-    // GET /api/v1/panel/auth/yo  → prueba de que el token funciona
-    [Authorize]
+    // GET /api/v1/panel/auth/yo
     [HttpGet("yo")]
     public IActionResult Yo() => Ok(new
     {
-        id = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value,
+        id = ServicioAutenticacion.Instancia.IdUsuario(User),
         nombre = User.Identity?.Name,
-        tipo = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value,
+        tipo = User.FindFirstValue(ClaimTypes.Role),
     });
 }

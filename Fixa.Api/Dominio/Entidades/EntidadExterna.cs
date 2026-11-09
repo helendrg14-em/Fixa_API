@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Fixa.Api.Dominio.Entidades;
 
-public partial class EntidadesExterna
+public partial class EntidadExterna
 {
     public long Id { get; set; }
 
@@ -11,5 +11,5 @@ public partial class EntidadesExterna
 
     public string? Contacto { get; set; }
 
-    public virtual ICollection<Derivacione> Derivaciones { get; set; } = new List<Derivacione>();
+    public virtual ICollection<Derivacion> Derivaciones { get; set; } = new List<Derivacion>();
 }

@@ -21,7 +21,7 @@ public partial class Categoria
 
     public virtual ICollection<Caso> Casos { get; set; } = new List<Caso>();
 
-    public virtual ICollection<MetasAtencion> MetasAtencions { get; set; } = new List<MetasAtencion>();
+    public virtual ICollection<MetaAtencion> MetasAtencion { get; set; } = new List<MetaAtencion>();
 
-    public virtual UnidadesResponsable Unidad { get; set; } = null!;
+    public virtual UnidadResponsable Unidad { get; set; } = null!;
 }

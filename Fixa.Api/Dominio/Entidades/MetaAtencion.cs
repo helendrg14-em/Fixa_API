@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Fixa.Api.Dominio.Entidades;
 
-public partial class MetasAtencion
+public partial class MetaAtencion
 {
     public long Id { get; set; }
 

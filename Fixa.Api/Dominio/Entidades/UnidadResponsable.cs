@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Fixa.Api.Dominio.Entidades;
 
-public partial class UnidadesResponsable
+public partial class UnidadResponsable
 {
     public long Id { get; set; }
 
@@ -13,7 +13,7 @@ public partial class UnidadesResponsable
 
     public virtual ICollection<Caso> Casos { get; set; } = new List<Caso>();
 
-    public virtual ICollection<Categoria> Categoria { get; set; } = new List<Categoria>();
+    public virtual ICollection<Categoria> Categorias { get; set; } = new List<Categoria>();
 
     public virtual ICollection<Cuadrilla> Cuadrillas { get; set; } = new List<Cuadrilla>();
 

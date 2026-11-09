@@ -143,6 +143,9 @@ public sealed class GestorCasos(
     {
         if (!await DeSuCuadrilla(casoId, tecnicoId, cancelacion))
             throw new NoEncontradoException("El caso no existe o no está asignado a tu cuadrilla.");
+        // Se revisa antes de subir las fotos para no gastar almacenamiento en un envío que se rechazará.
+        if (!await db.Casos.AnyAsync(c => c.Id == casoId && c.Estado == EstadoCaso.EnAtencion.ABd(), cancelacion))
+            throw new ReglaNegocioException("Primero inicia la atención del caso.");
         if (tipo == TipoEvidencia.ActaTecnica && string.IsNullOrWhiteSpace(descripcion))
             throw new ReglaNegocioException("Explica por qué se adjunta un acta técnica en lugar de una foto del trabajo.");
         ValidadorFoto.Validar(fotos, obligatoria: true);

@@ -20,7 +20,7 @@ public static class ValidadorFoto
     public static void Validar(IReadOnlyCollection<IFormFile> fotos, bool obligatoria)
     {
         if (obligatoria && fotos.Count == 0)
-            throw new ReglaNegocioException("Agrega una foto del problema.");
+            throw new ReglaNegocioException("Agrega al menos una foto.");
         if (fotos.Count > MaximoFotos)
             throw new ReglaNegocioException($"Puedes enviar como máximo {MaximoFotos} fotos.");
 

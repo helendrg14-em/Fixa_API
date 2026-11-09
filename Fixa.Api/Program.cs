@@ -2,6 +2,7 @@ using Fixa.Api.Infraestructura;
 using Fixa.Api.Infraestructura.Datos;
 using Fixa.Api.Infraestructura.Seguridad;
 using Fixa.Api.Modulos.Auth;
+using Fixa.Api.Modulos.Casos;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
@@ -48,6 +49,8 @@ builder.Services.AddCors(cors => cors.AddDefaultPolicy(politica => politica
     .WithHeaders("Authorization", "Content-Type")));
 
 builder.Services.AddServiciosExternos();
+builder.Services.AddScoped<PlazoAtencion>();
+builder.Services.AddScoped<GestorCasos>();
 builder.Services.AddLimitesDePeticiones();
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<ManejadorErrores>();

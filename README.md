@@ -28,6 +28,9 @@ el dueño de las tablas: esta API no crea migraciones.
 | PATCH | `/api/v1/panel/casos/{id}/estado` y `/prioridad` | Supervisor |
 | POST | `/api/v1/panel/casos/{id}/programaciones` y `/derivaciones` | Supervisor |
 | POST | `/api/v1/panel/casos/intervenciones/{id}/validacion` | Supervisor |
+| GET | `/api/v1/panel/ordenes` | Técnico (casos programados para su cuadrilla) |
+| POST | `/api/v1/panel/ordenes/{casoId}/inicio` | Técnico |
+| POST | `/api/v1/panel/ordenes/{casoId}/intervenciones` (multipart, con evidencia) | Técnico, máx. 10 por IP cada 10 min |
 
 ## Configuración (User Secrets en desarrollo, variables de entorno en Render)
 
@@ -56,7 +59,7 @@ En desarrollo, la página de pruebas está en `http://localhost:5112/scalar`.
 ## Seguridad
 
 - Todo endpoint exige token salvo los marcados como públicos; una cuenta desactivada pierde el acceso al instante.
-- El supervisor solo ve y modifica los casos de su unidad.
+- El supervisor solo ve y modifica los casos de su unidad; el técnico, solo los programados para su cuadrilla, y no puede cerrarlos (RN-04).
 - Contraseñas y claves de consulta con bcrypt, verificadas en tiempo constante y con el mismo mensaje de error.
 - Límites de peticiones por IP, cabeceras de seguridad, HSTS en producción y errores sin detalles internos.
 - Fotos revisadas por su contenido real (JPG, PNG o WebP), máximo 3 de 3 MB.

@@ -1,0 +1,61 @@
+# FIXA API — Integración continua (T02)
+# En cada push o pull request a main: compila la API y corre las pruebas automáticas de
+# registro, permisos, estados y cierre contra una base PostGIS temporal.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  pruebas:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      postgis:
+        # Misma imagen que la base local de Laravel (docker compose).
+        image: postgis/postgis:17-3.5
+        env:
+          POSTGRES_USER: fixa
+          POSTGRES_PASSWORD: fixa_ci # solo existe dentro de esta máquina temporal
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U fixa"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      FIXA_PRUEBAS_DB: Host=localhost;Port=5432;Database=postgres;Username=fixa;Password=fixa_ci
+      DOTNET_NOLOGO: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restaurar paquetes
+        run: dotnet restore Fixa.slnx
+
+      - name: Compilar
+        run: dotnet build Fixa.slnx --no-restore --configuration Release
+
+      - name: Pruebas
+        run: dotnet test Fixa.slnx --no-build --configuration Release --logger "trx;LogFileName=resultados.trx" --results-directory resultados
+
+      - name: Guardar resultados
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: resultados-pruebas
+          path: resultados

@@ -1,3 +1,5 @@
+[![CI](https://github.com/helendrg14-em/Fixa_API/actions/workflows/ci.yml/badge.svg)](https://github.com/helendrg14-em/Fixa_API/actions/workflows/ci.yml)
+
 # FIXA API
 
 API REST de FIXA en ASP.NET Core (.NET 10). La consumen la app del ciudadano y el panel web.
@@ -55,6 +57,36 @@ dotnet run
 ```
 
 En desarrollo, la página de pruebas está en `http://localhost:5112/scalar`.
+
+## Pruebas automáticas y CI
+
+`Fixa.Api.Tests` tiene pruebas de integración (xUnit) que levantan la API completa en memoria
+contra una base PostGIS **temporal**: se crea al empezar y se borra al terminar.
+
+| Carpeta | Qué verifica |
+|---|---|
+| `Registro/` | Reporte válido, idempotencia, foto obligatoria y real, distrito, solo 3 categorías, seguimiento con código y clave, límite por IP |
+| `Permisos/` | Token, roles, unidad del supervisor, cuadrilla del técnico, cuenta desactivada, sin datos de contacto |
+| `Estados/` | Máquina de estados RN-03, prioridad, programación, derivación, historial inmutable |
+| `Cierre/` | Intervención con evidencia, solo el supervisor cierra (RN-04), rechazo con observación |
+
+Cloudinary, Firebase y Mailgun se reemplazan por adaptadores falsos: las pruebas no gastan
+créditos ni necesitan credenciales.
+
+**En tu PC** (con Docker encendido; usa la misma conexión de User Secrets de la API):
+
+```bash
+dotnet test
+```
+
+**En GitHub** corren solas en cada push y pull request a `main` (`.github/workflows/ci.yml`).
+El resultado está en la pestaña **Actions** del repositorio.
+
+**Si Laravel cambia una migración**, actualiza el esquema de las pruebas:
+
+```bash
+docker exec fixa_laravel-db-1 pg_dump -U fixa -d fixa --schema-only --no-owner --no-privileges --no-comments > Fixa.Api.Tests/Datos/schema.sql
+```
 
 ## Seguridad
 

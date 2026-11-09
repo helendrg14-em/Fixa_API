@@ -83,3 +83,6 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+// Permite que las pruebas de integración levanten la API (WebApplicationFactory<Program>).
+public partial class Program;

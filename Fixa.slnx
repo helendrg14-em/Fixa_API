@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="Fixa.Api.Tests/Fixa.Api.Tests.csproj" />
+  <Project Path="Fixa.Api/Fixa.Api.csproj" />
+</Solution>

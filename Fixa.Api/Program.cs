@@ -1,9 +1,15 @@
+using Fixa.Api.Infraestructura.Datos;
+using Microsoft.EntityFrameworkCore;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 
 builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
+builder.Services.AddDbContext<FixaDbContext>(opciones =>
+    opciones.UseNpgsql(
+        builder.Configuration.GetConnectionString("Fixa"),
+        npgsql => npgsql.UseNetTopologySuite()));
 builder.Services.AddOpenApi();
 
 var app = builder.Build();

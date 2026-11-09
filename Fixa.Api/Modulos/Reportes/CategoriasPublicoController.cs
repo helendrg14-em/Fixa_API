@@ -1,6 +1,8 @@
 using Fixa.Api.Dominio;
+using Fixa.Api.Infraestructura.Datos;
 using Fixa.Api.Modulos.Reportes.Categorias;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace Fixa.Api.Modulos.Reportes;
 
@@ -13,6 +15,18 @@ namespace Fixa.Api.Modulos.Reportes;
 [Route("api/v1/publico/categorias")]
 public class CategoriasPublicoController : ControllerBase
 {
+    // GET /api/v1/publico/categorias
+    [HttpGet]
+    public async Task<IActionResult> Listar([FromServices] FixaDbContext db)
+    {
+        var categorias = await db.Categorias
+            .Where(c => c.Activa)
+            .Select(c => new { c.Id, c.Codigo, c.Nombre })
+            .ToListAsync();
+
+        return Ok(categorias);
+    }
+
     // GET /api/v1/publico/categorias/alumbrado/tipos
     [HttpGet("{codigo}/tipos")]
     public IActionResult Tipos(string codigo)

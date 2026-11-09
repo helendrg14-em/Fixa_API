@@ -3,6 +3,7 @@ using System.Security.Claims;
 using System.Text;
 using Fixa.Api.Dominio;
 using Fixa.Api.Dominio.Entidades;
+using Fixa.Api.Infraestructura.Seguridad;
 using Microsoft.IdentityModel.Tokens;
 
 namespace Fixa.Api.Modulos.Auth;
@@ -23,10 +24,6 @@ public sealed class ServicioAutenticacion
     public static ServicioAutenticacion Instancia => instancia.Value;
 
     public static readonly TimeSpan DuracionSesion = TimeSpan.FromMinutes(15); // RNF-06
-
-    // Hash de relleno: si el correo no existe se verifica igual, así la respuesta tarda lo mismo
-    // y no revela qué correos están registrados.
-    private static readonly string hashDeRelleno = BCrypt.Net.BCrypt.HashPassword(Guid.NewGuid().ToString(), 12);
 
     private SymmetricSecurityKey? clave;
 
@@ -57,15 +54,9 @@ public sealed class ServicioAutenticacion
     /// <summary>La cuenta se busca por correo, sin espacios y sin distinguir mayúsculas.</summary>
     public string NormalizarCorreo(string correo) => correo.Trim().ToLowerInvariant();
 
-    /// <summary>
-    /// Verifica la contraseña contra el hash bcrypt que guardó Laravel. Con usuario null igual
-    /// gasta el mismo tiempo, para no revelar si el correo existe.
-    /// </summary>
-    public bool Credenciales(Usuario? usuario, string password)
-    {
-        var valida = BCrypt.Net.BCrypt.Verify(password, usuario?.PasswordHash ?? hashDeRelleno);
-        return usuario is not null && valida;
-    }
+    /// <summary>Verifica la contraseña contra el hash que guardó Laravel, en tiempo constante exista o no el usuario.</summary>
+    public bool Credenciales(Usuario? usuario, string password) =>
+        VerificadorClave.Verificar(password, usuario?.PasswordHash);
 
     /// <summary>Igual que en Laravel: cuenta activa, contraseña ya registrada y perfil con acceso al panel.</summary>
     public bool PuedeEntrar(Usuario usuario) =>

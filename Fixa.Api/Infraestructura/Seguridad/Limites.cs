@@ -19,7 +19,7 @@ public static class Limites
             opciones.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
             Agregar(opciones, Login, permitidas: 5, ventana: TimeSpan.FromMinutes(1));
             Agregar(opciones, Consulta, permitidas: 10, ventana: TimeSpan.FromMinutes(1));
-            Agregar(opciones, Registro, permitidas: 5, ventana: TimeSpan.FromMinutes(10));
+            Agregar(opciones, Registro, permitidas: 10, ventana: TimeSpan.FromMinutes(10));
         });
 
     private static void Agregar(RateLimiterOptions opciones, string nombre, int permitidas, TimeSpan ventana) =>

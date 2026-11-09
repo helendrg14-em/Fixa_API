@@ -1,3 +1,4 @@
+using Fixa.Api.Infraestructura;
 using Fixa.Api.Infraestructura.Datos;
 using Fixa.Api.Infraestructura.Seguridad;
 using Fixa.Api.Modulos.Auth;
@@ -46,6 +47,7 @@ builder.Services.AddCors(cors => cors.AddDefaultPolicy(politica => politica
     .WithMethods("GET", "POST", "PATCH")
     .WithHeaders("Authorization", "Content-Type")));
 
+builder.Services.AddServiciosExternos();
 builder.Services.AddLimitesDePeticiones();
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<ManejadorErrores>();

@@ -34,4 +34,20 @@ public static class EstadoCasoReglas
 
     public static bool EsFinal(this EstadoCaso estado) =>
         estado is EstadoCaso.Cerrada or EstadoCaso.Rechazada or EstadoCaso.Duplicada or EstadoCaso.Derivada;
+
+    /// <summary>Texto que ve el vecino en el seguimiento y en los avisos.</summary>
+    public static string Texto(this EstadoCaso estado) => estado switch
+    {
+        EstadoCaso.Recibida => "Recibida",
+        EstadoCaso.EnRevision => "En revisión",
+        EstadoCaso.Asignada => "Asignada",
+        EstadoCaso.Programada => "Programada",
+        EstadoCaso.EnAtencion => "En atención",
+        EstadoCaso.PendienteValidacion => "Pendiente de validación",
+        EstadoCaso.Cerrada => "Cerrada",
+        EstadoCaso.Rechazada => "Rechazada",
+        EstadoCaso.Duplicada => "Duplicada",
+        EstadoCaso.Derivada => "Derivada a otra entidad",
+        _ => estado.ToString(),
+    };
 }

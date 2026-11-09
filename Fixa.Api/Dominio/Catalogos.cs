@@ -9,7 +9,10 @@ public enum CanalOrigen { AppMovil, Web, Telefono, Presencial }
 /// <summary>Perfiles de funcionario. El operador es versión futura y no entra al panel.</summary>
 public enum TipoUsuario { Administrador, Supervisor, Tecnico, Operador }
 
-public enum TipoEvento { Registro, CambioEstado, Priorizacion, Programacion, Derivacion, Validacion, Vinculacion }
+public enum TipoEvento { Registro, CambioEstado, Priorizacion, Programacion, Derivacion, Validacion, Vinculacion, Intervencion }
+
+/// <summary>Evidencia del trabajo (RF-09): foto, o acta técnica justificada cuando no se puede fotografiar.</summary>
+public enum TipoEvidencia { Fotografia, ActaTecnica }
 
 public enum EstadoResolucion { Pendiente, Aprobada, Rechazada }
 

@@ -50,6 +50,7 @@ public sealed class MaquinaEstadosPruebas(EntornoPruebas entorno) : PruebaApi(en
 
     [Theory]
     [InlineData("cerrada")]
+    [InlineData("duplicada")] // se marca con la vinculación, que exige el caso principal
     [InlineData("asignada")]
     [InlineData("estado_inventado")]
     public async Task Los_estados_con_operacion_propia_no_se_cambian_directo(string estado)

@@ -97,6 +97,7 @@ public sealed class EntornoPruebas : IAsyncLifetime
         await CrearUsuarioAsync(Usuarios.SupervisorAlumbrado, "supervisor", unidad: 2, cuadrilla: null);
         await CrearUsuarioAsync(Usuarios.TecnicoCuadrillaA, "tecnico", unidad: 1, cuadrilla: 1);
         await CrearUsuarioAsync(Usuarios.TecnicoCuadrillaB, "tecnico", unidad: 1, cuadrilla: 2);
+        await CrearUsuarioAsync(Usuarios.Administrador, "administrador", unidad: null, cuadrilla: null);
     }
 
     private static NpgsqlCommand Comando(NpgsqlConnection conexion, string sql, object[] valores)

@@ -6,6 +6,20 @@ namespace Fixa.Api.Tests.Registro;
 public sealed class RegistroReportesPruebas(EntornoPruebas entorno) : PruebaApi(entorno)
 {
     [Fact]
+    public async Task Las_fechas_se_guardan_en_hora_de_Bolivia_aunque_el_servidor_este_en_UTC()
+    {
+        var antes = Fixa.Api.Dominio.HoraBolivia.Ahora().AddMinutes(-2);
+        var reporte = await RegistrarReporteAsync();
+        var despues = Fixa.Api.Dominio.HoraBolivia.Ahora().AddMinutes(2);
+
+        var creacion = await Entorno.EscalarAsync<DateTime>("SELECT fecha_creacion FROM casos WHERE id = $1", reporte.CasoId);
+        var evento = await Entorno.EscalarAsync<DateTime>("SELECT fecha_hora FROM eventos_historial WHERE caso_id = $1", reporte.CasoId);
+
+        Assert.InRange(creacion, antes, despues);
+        Assert.InRange(evento, antes, despues);
+    }
+
+    [Fact]
     public async Task Reporte_valido_crea_caso_recibido_con_codigo_y_evento()
     {
         var reporte = await RegistrarReporteAsync();

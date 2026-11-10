@@ -7,4 +7,5 @@ public static class Usuarios
     public const string SupervisorAlumbrado = "supervisor.alumbrado@pruebas.fixa";
     public const string TecnicoCuadrillaA = "tecnico.a@pruebas.fixa";
     public const string TecnicoCuadrillaB = "tecnico.b@pruebas.fixa";
+    public const string Administrador = "admin@pruebas.fixa";
 }

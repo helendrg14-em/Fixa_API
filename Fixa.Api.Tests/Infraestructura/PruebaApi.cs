@@ -35,16 +35,25 @@ public abstract class PruebaApi(EntornoPruebas entorno)
         return cliente;
     }
 
-    /// <summary>Formulario de reporte válido (bache con foto); cada prueba cambia lo que necesita.</summary>
-    protected static Dictionary<string, string> FormularioValido() => new()
+    /// <summary>
+    /// Formulario de reporte válido (bache con foto, o alumbrado con 2 luminarias); cada prueba
+    /// cambia lo que necesita.
+    /// </summary>
+    protected static Dictionary<string, string> FormularioValido(string categoria = "bache", double latitud = Latitud, double longitud = Longitud)
     {
-        ["categoria"] = "bache",
-        ["latitud"] = Latitud.ToString(System.Globalization.CultureInfo.InvariantCulture),
-        ["longitud"] = Longitud.ToString(System.Globalization.CultureInfo.InvariantCulture),
-        ["tipoIncidencia"] = "bache",
-        ["descripcion"] = "Bache de prueba automática",
-        ["claveIdempotencia"] = Guid.NewGuid().ToString("N"),
-    };
+        var formulario = new Dictionary<string, string>
+        {
+            ["categoria"] = categoria,
+            ["latitud"] = latitud.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            ["longitud"] = longitud.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            ["tipoIncidencia"] = categoria == "alumbrado" ? "luminaria_apagada" : "bache",
+            ["descripcion"] = "Reporte de prueba automática",
+            ["claveIdempotencia"] = Guid.NewGuid().ToString("N"),
+        };
+        if (categoria == "alumbrado")
+            formulario["numeroLuminarias"] = "2";
+        return formulario;
+    }
 
     protected static MultipartFormDataContent Multipart(Dictionary<string, string> campos, params byte[][] fotos)
     {
@@ -63,9 +72,9 @@ public abstract class PruebaApi(EntornoPruebas entorno)
     protected Task<HttpResponseMessage> EnviarReporteAsync(Dictionary<string, string> campos, params byte[][] fotos) =>
         Anonimo().PostAsync("/api/v1/publico/reportes", Multipart(campos, fotos));
 
-    protected async Task<ReporteCreado> RegistrarReporteAsync()
+    protected async Task<ReporteCreado> RegistrarReporteAsync(string categoria = "bache", double latitud = Latitud, double longitud = Longitud)
     {
-        var respuesta = await EnviarReporteAsync(FormularioValido(), FotoJpg);
+        var respuesta = await EnviarReporteAsync(FormularioValido(categoria, latitud, longitud), FotoJpg);
         Assert.Equal(HttpStatusCode.Created, respuesta.StatusCode);
         var cuerpo = (await respuesta.Content.ReadFromJsonAsync<RespuestaRegistro>())!;
         var casoId = await entorno.EscalarAsync<long>("SELECT caso_id FROM reportes WHERE codigo = $1", cuerpo.Codigo);

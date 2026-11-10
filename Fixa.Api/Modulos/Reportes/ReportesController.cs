@@ -3,6 +3,7 @@ using Fixa.Api.Dominio;
 using Fixa.Api.Infraestructura.Datos;
 using Fixa.Api.Infraestructura.Fotos;
 using Fixa.Api.Infraestructura.Seguridad;
+using Fixa.Api.Modulos.Casos;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -32,12 +33,19 @@ public record SolicitudSeguimiento(
     [Required, StringLength(20)] string Codigo,
     [Required, StringLength(20)] string Clave);
 
+public record SolicitudRevisionCierre(
+    [Required, StringLength(20)] string Codigo,
+    [Required, StringLength(20)] string Clave,
+    [Required, StringLength(1000, MinimumLength = 10)] string Motivo);
+
 /// <summary>Reportes del ciudadano, sin cuenta (RF-01, RF-02, RF-07).</summary>
 [ApiController]
 [AllowAnonymous]
 [Route("api/v1/publico")]
-public class ReportesController(FixaDbContext db, IAlmacenFotos almacen) : ControllerBase
+public class ReportesController(FixaDbContext db, IAlmacenFotos almacen, GestorCasos gestor) : ControllerBase
 {
+    private const string AccesoIncorrecto = "Código o clave incorrectos.";
+
     // POST /api/v1/publico/reportes
     [HttpPost("reportes")]
     [Consumes("multipart/form-data")]
@@ -71,32 +79,65 @@ public class ReportesController(FixaDbContext db, IAlmacenFotos almacen) : Contr
     [EnableRateLimiting(Limites.Consulta)]
     public async Task<IActionResult> Seguimiento(SolicitudSeguimiento solicitud, CancellationToken cancelacion)
     {
+        if (await ReporteVerificadoAsync(solicitud.Codigo, solicitud.Clave, cancelacion) is not long id)
+            return Problem(statusCode: StatusCodes.Status401Unauthorized, title: AccesoIncorrecto);
+
         var reporte = await db.Reportes.AsNoTracking()
-            .Where(r => r.Codigo == solicitud.Codigo.Trim().ToUpperInvariant())
+            .Where(r => r.Id == id)
             .Select(r => new
             {
-                r.ClaveHash,
                 r.Codigo,
                 r.FechaRegistro,
                 r.Caso.Estado,
+                r.Caso.FechaCierre,
                 Categoria = r.Caso.Categoria.Nombre,
                 Unidad = r.Caso.Unidad != null ? r.Caso.Unidad.Nombre : null,
                 UltimaActualizacion = r.Caso.EventosHistorial.Max(e => (DateTime?)e.FechaHora),
+                Revision = r.Caso.Reportes.SelectMany(o => o.SolicitudesRevision)
+                    .OrderByDescending(s => s.Id)
+                    .Select(s => new { s.Estado, s.Respuesta, s.FechaResolucion })
+                    .FirstOrDefault(),
             })
-            .FirstOrDefaultAsync(cancelacion);
+            .FirstAsync(cancelacion);
 
-        // Mismo mensaje si el código no existe o si la clave es incorrecta (RN-07).
-        if (!VerificadorClave.Verificar(solicitud.Clave.Trim().ToUpperInvariant(), reporte?.ClaveHash))
-            return Problem(statusCode: StatusCodes.Status401Unauthorized, title: "Código o clave incorrectos.");
-
+        var estado = ValoresBd.DesdeBd<EstadoCaso>(reporte.Estado);
         return Ok(new
         {
-            reporte!.Codigo,
-            estado = ValoresBd.DesdeBd<EstadoCaso>(reporte.Estado).Texto(),
+            reporte.Codigo,
+            estado = estado.Texto(),
             reporte.Categoria,
             reporte.Unidad,
             reporte.FechaRegistro,
+            reporte.FechaCierre,
             reporte.UltimaActualizacion,
+            // Hasta cuándo puede pedir que se revise el cierre (15 días corridos).
+            revisionDisponibleHasta = estado == EstadoCaso.Cerrada ? reporte.FechaCierre?.AddDays(GestorCasos.DiasParaRevision) : null,
+            reporte.Revision,
         });
+    }
+
+    // POST /api/v1/publico/revisiones  (pedir que se revise un cierre)
+    [HttpPost("revisiones")]
+    [EnableRateLimiting(Limites.Consulta)]
+    public async Task<IActionResult> SolicitarRevision(SolicitudRevisionCierre solicitud, CancellationToken cancelacion)
+    {
+        if (await ReporteVerificadoAsync(solicitud.Codigo, solicitud.Clave, cancelacion) is not long id)
+            return Problem(statusCode: StatusCodes.Status401Unauthorized, title: AccesoIncorrecto);
+
+        await gestor.SolicitarRevisionAsync(id, solicitud.Motivo.Trim(), cancelacion);
+        return StatusCode(StatusCodes.Status201Created, new { mensaje = "Recibimos tu solicitud. El supervisor la revisará." });
+    }
+
+    /// <summary>
+    /// Id del reporte si el código y la clave coinciden. Se verifica en tiempo constante y con el
+    /// mismo resultado exista o no el código, para no revelar qué códigos existen (RN-07).
+    /// </summary>
+    private async Task<long?> ReporteVerificadoAsync(string codigo, string clave, CancellationToken cancelacion)
+    {
+        var reporte = await db.Reportes.AsNoTracking()
+            .Where(r => r.Codigo == codigo.Trim().ToUpperInvariant())
+            .Select(r => new { r.Id, r.ClaveHash })
+            .FirstOrDefaultAsync(cancelacion);
+        return VerificadorClave.Verificar(clave.Trim().ToUpperInvariant(), reporte?.ClaveHash) ? reporte!.Id : null;
     }
 }

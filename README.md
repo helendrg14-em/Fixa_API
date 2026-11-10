@@ -24,12 +24,19 @@ el dueño de las tablas: esta API no crea migraciones.
 | GET | `/api/v1/publico/categorias/{codigo}/tipos` | Público |
 | POST | `/api/v1/publico/reportes` (multipart, con fotos) | Público, máx. 10 por IP cada 10 min |
 | POST | `/api/v1/publico/seguimiento` | Público, máx. 10 por IP por minuto |
+| POST | `/api/v1/publico/revisiones` (pedir revisión de un cierre, hasta 15 días) | Público con código y clave, máx. 10 por IP por minuto |
+| GET | `/api/v1/publico/mapa` (GeoJSON anónimo, ubicación aproximada) | Público, máx. 10 por IP por minuto |
 | POST | `/api/v1/panel/auth/login` | Público, máx. 5 por IP por minuto |
 | GET | `/api/v1/panel/auth/yo` | Funcionario con token |
 | GET | `/api/v1/panel/casos` y `/api/v1/panel/casos/{id}` | Supervisor |
 | PATCH | `/api/v1/panel/casos/{id}/estado` y `/prioridad` | Supervisor |
 | POST | `/api/v1/panel/casos/{id}/programaciones` y `/derivaciones` | Supervisor |
 | POST | `/api/v1/panel/casos/intervenciones/{id}/validacion` | Supervisor |
+| PATCH | `/api/v1/panel/casos/{id}/categoria` (corregir categoría; el caso pasa a su unidad) | Supervisor |
+| GET | `/api/v1/panel/casos/{id}/cercanos` (posibles duplicados) | Supervisor |
+| POST | `/api/v1/panel/casos/{id}/vinculacion` (marcar duplicado de un caso principal) | Supervisor |
+| GET | `/api/v1/panel/casos/revisiones` y POST `/api/v1/panel/casos/revisiones/{id}` | Supervisor |
+| GET | `/api/v1/panel/indicadores` y `/api/v1/panel/mapa` (`?desde=&hasta=&distritoId=&categoria=`) | Supervisor (su unidad) y administrador (todas) |
 | GET | `/api/v1/panel/ordenes` | Técnico (casos programados para su cuadrilla) |
 | POST | `/api/v1/panel/ordenes/{casoId}/inicio` | Técnico |
 | POST | `/api/v1/panel/ordenes/{casoId}/intervenciones` (multipart, con evidencia) | Técnico, máx. 10 por IP cada 10 min |
@@ -44,8 +51,17 @@ el dueño de las tablas: esta API no crea migraciones.
 | `Firebase:CredencialesJson` | No | Avisos push; sin ella no se envían |
 | `Mailgun:Dominio`, `Mailgun:ApiKey`, `Mailgun:Remitente`, `Mailgun:UrlBase` | No | Avisos por correo; sin ellos no se envían |
 | `Cors:Origenes` | No | Orígenes web permitidos (panel) |
+| `Vencimientos:Minutos` | No | Cada cuánto se marcan los casos vencidos (por defecto, 15) |
 
 En Render, los dos puntos se escriben como doble guion bajo: `ConnectionStrings__Fixa`, `Jwt__Clave`.
+
+**Fechas:** todo se guarda en hora local de Bolivia, igual que en Laravel. La API abre cada
+conexión con la zona `America/La_Paz`, así que los valores por defecto de la base también salen
+en hora de Bolivia aunque el servidor de PostgreSQL esté en UTC.
+
+**Vencidos:** un proceso en segundo plano marca los casos abiertos con la fecha objetivo pasada
+y deja el evento en el historial. Como Render gratis se apaga sin tráfico, la bandeja y los
+indicadores también lo revisan antes de mostrar datos.
 
 ## Ejecutar
 
@@ -65,10 +81,11 @@ contra una base PostGIS **temporal**: se crea al empezar y se borra al terminar.
 
 | Carpeta | Qué verifica |
 |---|---|
-| `Registro/` | Reporte válido, idempotencia, foto obligatoria y real, distrito, solo 3 categorías, seguimiento con código y clave, límite por IP |
+| `Registro/` | Reporte válido, idempotencia, foto obligatoria y real, distrito, solo 3 categorías, seguimiento con código y clave, límite por IP, fechas en hora de Bolivia |
 | `Permisos/` | Token, roles, unidad del supervisor, cuadrilla del técnico, cuenta desactivada, sin datos de contacto |
-| `Estados/` | Máquina de estados RN-03, prioridad, programación, derivación, historial inmutable |
-| `Cierre/` | Intervención con evidencia, solo el supervisor cierra (RN-04), rechazo con observación |
+| `Estados/` | Máquina de estados RN-03, prioridad, programación, derivación, corrección de categoría, duplicados, vencidos, historial inmutable |
+| `Cierre/` | Intervención con evidencia, solo el supervisor cierra (RN-04), rechazo con observación, revisión del cierre en 15 días |
+| `Indicadores/` | Indicadores por unidad, filtros, mapa del panel y mapa público anónimo |
 
 Cloudinary, Firebase y Mailgun se reemplazan por adaptadores falsos: las pruebas no gastan
 créditos ni necesitan credenciales.

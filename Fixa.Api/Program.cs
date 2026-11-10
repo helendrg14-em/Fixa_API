@@ -3,9 +3,11 @@ using Fixa.Api.Infraestructura.Datos;
 using Fixa.Api.Infraestructura.Seguridad;
 using Fixa.Api.Modulos.Auth;
 using Fixa.Api.Modulos.Casos;
+using Fixa.Api.Modulos.Indicadores;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -13,8 +15,12 @@ var builder = WebApplication.CreateBuilder(args);
 // Ninguna petición puede superar 10 MB (el registro admite hasta 3 fotos de 3 MB).
 builder.WebHost.ConfigureKestrel(kestrel => kestrel.Limits.MaxRequestBodySize = 10 * 1024 * 1024);
 
+// Las fechas se guardan en hora local de Bolivia (convención de Laravel). Con la zona de la
+// sesión en America/La_Paz, los valores por defecto de la base (CURRENT_TIMESTAMP) también lo
+// están, aunque el servidor de PostgreSQL esté en UTC (Docker, Neon, Supabase).
+var conexion = new NpgsqlConnectionStringBuilder(builder.Configuration.GetConnectionString("Fixa")) { Timezone = "America/La_Paz" };
 builder.Services.AddDbContext<FixaDbContext>(opciones => opciones.UseNpgsql(
-    builder.Configuration.GetConnectionString("Fixa"),
+    conexion.ConnectionString,
     npgsql => npgsql.UseNetTopologySuite()));
 
 // Singleton: se configura una sola vez al arrancar, con la clave de User Secrets o de Render.
@@ -51,6 +57,9 @@ builder.Services.AddCors(cors => cors.AddDefaultPolicy(politica => politica
 builder.Services.AddServiciosExternos();
 builder.Services.AddScoped<PlazoAtencion>();
 builder.Services.AddScoped<GestorCasos>();
+builder.Services.AddScoped<ControlVencimientos>();
+builder.Services.AddScoped<ConsultaIndicadores>();
+builder.Services.AddHostedService<VigilanteVencimientos>();
 builder.Services.AddLimitesDePeticiones();
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<ManejadorErrores>();

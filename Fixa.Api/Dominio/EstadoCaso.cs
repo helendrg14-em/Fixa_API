@@ -35,6 +35,9 @@ public static class EstadoCasoReglas
     public static bool EsFinal(this EstadoCaso estado) =>
         estado is EstadoCaso.Cerrada or EstadoCaso.Rechazada or EstadoCaso.Duplicada or EstadoCaso.Derivada;
 
+    /// <summary>Los estados finales tal como se guardan en la base, para usarlos en consultas SQL.</summary>
+    public static readonly string[] FinalesBd = Enum.GetValues<EstadoCaso>().Where(EsFinal).Select(e => e.ABd()).ToArray();
+
     /// <summary>Texto que ve el vecino en el seguimiento y en los avisos.</summary>
     public static string Texto(this EstadoCaso estado) => estado switch
     {

@@ -18,7 +18,7 @@ public record SolicitudVinculacion([Range(1, long.MaxValue)] long CasoPrincipalI
 public record SolicitudRespuestaRevision(bool Aceptar, [StringLength(1000)] string? Respuesta);
 
 /// <summary>
-/// Gestión de casos del supervisor (RF-04 a RF-13). Cada acción delega en la fachada
+/// Gestión de casos del supervisor. Cada acción delega en la fachada
 /// GestorCasos; el controlador solo traduce la petición y la respuesta.
 /// </summary>
 [ApiController]

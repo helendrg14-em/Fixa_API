@@ -17,6 +17,7 @@ public sealed class ManejadorErrores(IProblemDetailsService problemas, ILogger<M
         {
             ReglaNegocioException => (StatusCodes.Status422UnprocessableEntity, error.Message),
             NoEncontradoException => (StatusCodes.Status404NotFound, error.Message),
+            AccesoVecinoDenegadoException => (StatusCodes.Status401Unauthorized, AccesoVecinoDenegadoException.Mensaje),
             UnauthorizedAccessException => (StatusCodes.Status403Forbidden, "No tienes permiso para esta acción."),
             _ => (StatusCodes.Status500InternalServerError, "Ocurrió un error inesperado. Intenta de nuevo."),
         };

@@ -1,44 +1,42 @@
 using Fixa.Api.Dominio;
+using Fixa.Api.Dominio.Entidades;
 using Fixa.Api.Infraestructura.Datos;
+using Fixa.Api.Modulos.Casos.Plazos;
 using Microsoft.EntityFrameworkCore;
 
 namespace Fixa.Api.Modulos.Casos;
 
 /// <summary>
-/// Calcula la fecha objetivo de un caso con la meta de atención vigente de su categoría y
-/// prioridad (RN-06). La meta puede estar en horas corridas o en días hábiles; los días
-/// hábiles saltan sábados, domingos y los feriados registrados.
+/// Patrón Strategy — Contexto: calcula la fecha objetivo de un caso con la meta de atención
+/// vigente de su categoría y prioridad (RN-06). No sabe calcular plazos: según la meta, elige la
+/// estrategia (horas corridas o días hábiles) y le delega el cálculo. Una forma nueva de medir
+/// plazos solo agrega su clase en Plazos/ y una línea en ElegirEstrategia.
 /// </summary>
 public sealed class PlazoAtencion(FixaDbContext db)
 {
     public async Task<DateTime?> FechaObjetivoAsync(long categoriaId, Prioridad prioridad, CancellationToken cancelacion)
     {
+        var metaVigente = await MetaVigenteAsync(categoriaId, prioridad, cancelacion);
+        var estrategia = ElegirEstrategia(metaVigente);
+
+        // Sin meta configurada para esa categoría y prioridad, el caso no tiene fecha objetivo.
+        return estrategia is null ? null : await estrategia.FechaObjetivoAsync(HoraBolivia.Ahora(), cancelacion);
+    }
+
+    private IEstrategiaPlazo? ElegirEstrategia(MetaAtencion? meta) => meta switch
+    {
+        { PlazoHoras: int horas } => new PlazoEnHorasCorridas(horas),
+        { PlazoDiasHabiles: int dias } => new PlazoEnDiasHabiles(dias, db),
+        _ => null,
+    };
+
+    private Task<MetaAtencion?> MetaVigenteAsync(long categoriaId, Prioridad prioridad, CancellationToken cancelacion)
+    {
         var hoy = HoraBolivia.Hoy();
-        var meta = await db.MetasAtencion.AsNoTracking()
-            .Where(m => m.CategoriaId == categoriaId && m.Prioridad == prioridad.ABd()
-                        && m.VigenteDesde <= hoy && (m.VigenteHasta == null || m.VigenteHasta >= hoy))
-            .OrderByDescending(m => m.VigenteDesde)
+        return db.MetasAtencion.AsNoTracking()
+            .Where(meta => meta.CategoriaId == categoriaId && meta.Prioridad == prioridad.ABd()
+                           && meta.VigenteDesde <= hoy && (meta.VigenteHasta == null || meta.VigenteHasta >= hoy))
+            .OrderByDescending(meta => meta.VigenteDesde)
             .FirstOrDefaultAsync(cancelacion);
-
-        var inicio = HoraBolivia.Ahora();
-        if (meta?.PlazoHoras is int horas)
-            return inicio.AddHours(horas);
-        if (meta?.PlazoDiasHabiles is not int dias)
-            return null;
-
-        var feriados = (await db.Feriados.AsNoTracking()
-            .Where(f => f.Fecha > hoy && f.Fecha <= hoy.AddDays(dias * 3 + 14))
-            .Select(f => f.Fecha)
-            .ToListAsync(cancelacion)).ToHashSet();
-
-        var fecha = inicio;
-        while (dias > 0)
-        {
-            fecha = fecha.AddDays(1);
-            var dia = DateOnly.FromDateTime(fecha);
-            if (fecha.DayOfWeek is not (DayOfWeek.Saturday or DayOfWeek.Sunday) && !feriados.Contains(dia))
-                dias--;
-        }
-        return fecha;
     }
 }

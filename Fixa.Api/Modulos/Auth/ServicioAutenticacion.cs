@@ -8,14 +8,6 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace Fixa.Api.Modulos.Auth;
 
-/// <summary>
-/// Patrón Singleton: toda la autenticación de funcionarios pasa por un único punto de acceso,
-/// así las reglas de acceso no se repiten en el login, en la validación del token ni en los módulos.
-///
-/// La instancia es compartida por todas las peticiones, por eso no guarda al usuario en un
-/// atributo: cada método recibe el usuario que necesita, y un funcionario nunca recibe la
-/// sesión de otro.
-/// </summary>
 public sealed class ServicioAutenticacion
 {
     // Lazy crea la instancia la primera vez que se usa y es seguro con varias peticiones a la vez.

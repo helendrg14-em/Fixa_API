@@ -61,6 +61,7 @@ builder.Services.AddScoped<ControlVencimientos>();
 builder.Services.AddScoped<ConsultaIndicadores>();
 builder.Services.AddHostedService<VigilanteVencimientos>();
 builder.Services.AddLimitesDePeticiones();
+builder.Services.AddProxyDeConfianza(builder.Configuration);
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<ManejadorErrores>();
 builder.Services.AddControllers();
@@ -68,6 +69,8 @@ builder.Services.AddOpenApi();
 
 var app = builder.Build();
 
+// Primero: la IP real del vecino y el esquema https, antes de cualquier límite o redirección.
+app.UseProxyDeConfianza();
 app.UseExceptionHandler();
 app.UseStatusCodePages();
 app.UseCabecerasSeguridad();

@@ -9,7 +9,11 @@ public enum CanalOrigen { AppMovil, Web, Telefono, Presencial }
 /// <summary>Perfiles de funcionario. El operador es versión futura y no entra al panel.</summary>
 public enum TipoUsuario { Administrador, Supervisor, Tecnico, Operador }
 
-public enum TipoEvento { Registro, CambioEstado, Priorizacion, Programacion, Derivacion, Validacion, Vinculacion, Intervencion, Reasignacion, Revision, Vencimiento }
+/// <summary>
+/// Tipos de evento del historial. Apoyo (un vecino se suma a un caso abierto) y Conformidad
+/// (el vecino confirma o no la solución) no cambian el estado del caso.
+/// </summary>
+public enum TipoEvento { Registro, CambioEstado, Priorizacion, Programacion, Derivacion, Validacion, Vinculacion, Intervencion, Reasignacion, Revision, Vencimiento, Apoyo, Conformidad }
 
 /// <summary>Evidencia del trabajo (RF-09): foto, o acta técnica justificada cuando no se puede fotografiar.</summary>
 public enum TipoEvidencia { Fotografia, ActaTecnica }

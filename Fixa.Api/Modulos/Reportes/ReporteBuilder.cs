@@ -1,11 +1,10 @@
-using System.Net.Mail;
-using System.Security.Cryptography;
 using Fixa.Api.Dominio;
 using Fixa.Api.Dominio.Entidades;
 using Fixa.Api.Infraestructura.Datos;
 using Fixa.Api.Infraestructura.Fotos;
 using Fixa.Api.Infraestructura.Seguridad;
 using Fixa.Api.Modulos.Reportes.Categorias;
+using Fixa.Api.Modulos.Reportes.Validacion;
 using Microsoft.EntityFrameworkCore;
 using NetTopologySuite.Geometries;
 using Npgsql;
@@ -19,13 +18,11 @@ public record ReporteRegistrado(string Codigo, string? Clave, bool YaExistia);
 /// del canal. Se arma paso a paso y RegistrarAsync() recién valida el conjunto y lo guarda de
 /// una sola vez: caso, reporte, fotos y evento del historial (guardado atómico e idempotente).
 ///
-/// Usa el Factory Method para las reglas de cada categoría y el Adapter para guardar las fotos.
+/// Usa el Factory Method para las reglas de cada categoría, la Chain of Responsibility para
+/// validar los datos y el Adapter para guardar las fotos.
 /// </summary>
 public sealed class ReporteBuilder(FixaDbContext db, IAlmacenFotos almacen, Categoria categoria, CanalOrigen canal)
 {
-    private const string AlfabetoClave = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"; // sin 0/O ni 1/I/L
-    private const int LargoClave = 6;
-
     private double? latitud, longitud;
     private int? numeroLuminarias;
     private string? tipo, descripcion, direccion, referencia, avisoCobranza, correo, tokenDispositivo, claveIdempotencia;
@@ -75,33 +72,21 @@ public sealed class ReporteBuilder(FixaDbContext db, IAlmacenFotos almacen, Cate
 
     private void Validar()
     {
-        var errores = CreadorCategoria.Para(ValoresBd.DesdeBd<CodigoCategoria>(categoria.Codigo))
-            .Validar(new DatosReporte(latitud, longitud, tipo, descripcion, numeroLuminarias, avisoCobranza));
-
-        if (claveIdempotencia is null || claveIdempotencia.Length is < 8 or > 64 || !claveIdempotencia.All(c => char.IsAsciiLetterOrDigit(c) || c == '-'))
-            errores.Add("Falta la clave de idempotencia (8 a 64 letras, números o guiones).");
-        if (direccion?.Length > 200 || referencia?.Length > 200)
-            errores.Add("La dirección y la referencia tienen como máximo 200 caracteres.");
-        if (correo is not null && (correo.Length > 120 || !MailAddress.TryCreate(correo, out _)))
-            errores.Add("El correo de contacto no es válido.");
-        if (tokenDispositivo?.Length > 255)
-            errores.Add("El identificador del dispositivo no es válido.");
-
-        if (errores.Count > 0)
-            throw new ReglaNegocioException(string.Join(" ", errores));
+        CadenasDeValidacion.ParaReporteNuevo().Exigir(new DatosAValidar(
+            Reporte: new DatosReporte(latitud, longitud, tipo, descripcion, numeroLuminarias, avisoCobranza),
+            Categoria: ValoresBd.DesdeBd<CodigoCategoria>(categoria.Codigo),
+            ClaveIdempotencia: claveIdempotencia,
+            Direccion: direccion,
+            Referencia: referencia,
+            CorreoContacto: correo,
+            TokenDispositivo: tokenDispositivo));
 
         // RN-02: la foto es obligatoria desde la app; solo el registro asistido (versión futura) puede omitirla.
         ValidadorFoto.Validar(fotos, obligatoria: canal is CanalOrigen.AppMovil or CanalOrigen.Web);
     }
 
-    private async Task<ReporteRegistrado?> BuscarExistenteAsync(CancellationToken cancelacion)
-    {
-        var codigo = await db.Reportes.AsNoTracking()
-            .Where(r => r.ClaveIdempotencia == claveIdempotencia)
-            .Select(r => r.Codigo)
-            .FirstOrDefaultAsync(cancelacion);
-        return codigo is null ? null : new ReporteRegistrado(codigo, Clave: null, YaExistia: true);
-    }
+    private Task<ReporteRegistrado?> BuscarExistenteAsync(CancellationToken cancelacion) =>
+        CodigoSeguimiento.YaRegistradoAsync(db, claveIdempotencia, cancelacion);
 
     private async Task<ReporteRegistrado> GuardarAsync(Point punto, long distritoId, List<FotoGuardada> guardadas, CancellationToken cancelacion)
     {
@@ -114,12 +99,12 @@ public sealed class ReporteBuilder(FixaDbContext db, IAlmacenFotos almacen, Cate
             Estado = EstadoCaso.Recibida.ABd(),
             RequiereVerificacionCampo = guardadas.Count == 0,
         };
-        var clave = RandomNumberGenerator.GetString(AlfabetoClave, LargoClave);
+        var clave = CodigoSeguimiento.NuevaClave();
         var reporte = new Reporte
         {
             Caso = caso,
             DistritoId = distritoId,
-            Codigo = await SiguienteCodigoAsync(cancelacion),
+            Codigo = await CodigoSeguimiento.SiguienteAsync(db, cancelacion),
             ClaveHash = VerificadorClave.Hash(clave),
             Descripcion = descripcion!,
             CanalOrigen = canal.ABd(),
@@ -146,21 +131,6 @@ public sealed class ReporteBuilder(FixaDbContext db, IAlmacenFotos almacen, Cate
         await db.SaveChangesAsync(cancelacion);
         await transaccion.CommitAsync(cancelacion);
         return new ReporteRegistrado(reporte.Codigo, clave, YaExistia: false);
-    }
-
-    /// <summary>
-    /// Código visible FX-AAAA-000123, correlativo por gestión. El contador queda bloqueado hasta
-    /// confirmar la transacción, así dos reportes nunca reciben el mismo número.
-    /// </summary>
-    private async Task<string> SiguienteCodigoAsync(CancellationToken cancelacion)
-    {
-        var anio = HoraBolivia.Hoy().Year;
-        var numero = await db.Database.SqlQuery<int>($"""
-            INSERT INTO contadores_codigo (anio, ultimo) VALUES ({anio}, 1)
-            ON CONFLICT (anio) DO UPDATE SET ultimo = contadores_codigo.ultimo + 1
-            RETURNING ultimo AS "Value"
-            """).ToListAsync(cancelacion);
-        return $"FX-{anio}-{numero[0]:D6}";
     }
 
     private static string? Limpiar(string? valor) => string.IsNullOrWhiteSpace(valor) ? null : valor.Trim();

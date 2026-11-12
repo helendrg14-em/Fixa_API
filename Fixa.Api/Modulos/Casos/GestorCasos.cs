@@ -296,6 +296,33 @@ public sealed class GestorCasos(
         });
     }
 
+    /// <summary>
+    /// El vecino confirma si el problema quedó solucionado. Solo vale para un caso cerrado, una
+    /// sola vez por reporte y dentro del mismo plazo que la revisión. Si no está conforme, la app
+    /// le ofrece pedir la revisión del cierre.
+    /// </summary>
+    public async Task RegistrarConformidadAsync(long reporteId, bool conforme, CancellationToken cancelacion)
+    {
+        var casoId = await db.Reportes.Where(r => r.Id == reporteId).Select(r => r.CasoId).FirstAsync(cancelacion);
+
+        await EjecutarAsync(casoId, usuarioId: null, SinRestriccion, cancelacion, async caso =>
+        {
+            if (Estado(caso) != EstadoCaso.Cerrada || caso.FechaCierre is null)
+                throw new ReglaNegocioException("Solo se puede confirmar la solución de un reporte cerrado.");
+            if (HoraBolivia.Ahora() > caso.FechaCierre.Value.AddDays(DiasParaRevision))
+                throw new ReglaNegocioException($"Pasaron más de {DiasParaRevision} días desde el cierre.");
+
+            var reporte = await db.Reportes.FirstAsync(r => r.Id == reporteId, cancelacion);
+            if (reporte.Conformidad is not null)
+                throw new ReglaNegocioException("Ya registraste tu respuesta para este reporte.");
+
+            reporte.Conformidad = conforme;
+            reporte.FechaConformidad = HoraBolivia.Ahora();
+            var respuesta = conforme ? "está conforme con la solución" : "no está conforme con la solución";
+            return Evento(caso, TipoEvento.Conformidad, $"El vecino del reporte {reporte.Codigo} {respuesta}.", null, EstadoCaso.Cerrada, EstadoCaso.Cerrada);
+        });
+    }
+
     // ---------------------------------------------------------------- Pasos comunes
 
     /// <summary>

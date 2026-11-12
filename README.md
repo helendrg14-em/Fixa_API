@@ -15,6 +15,9 @@ el dueño de las tablas: esta API no crea migraciones.
 | Builder | Creacional | `Modulos/Reportes/ReporteBuilder.cs` | Armar y guardar un reporte paso a paso, en una sola transacción |
 | Adapter | Estructural | `Infraestructura/Fotos/CloudinaryAdapter.cs`, `Infraestructura/Notificaciones/FirebaseAdapter.cs`, `MailgunAdapter.cs` | Servicios externos detrás de interfaces propias (`IAlmacenFotos`, `ICanalNotificacion`) |
 | Facade | Estructural | `Modulos/Casos/GestorCasos.cs` | Una sola puerta para gestionar casos: estados (RN-03), historial, plazos y avisos |
+| Strategy | Comportamiento | `Modulos/Casos/PlazoAtencion.cs` (contexto) y `Modulos/Casos/Plazos/` | Calcular la fecha objetivo en horas corridas o en días hábiles según la meta (RN-06) |
+| Chain of Responsibility | Comportamiento | `Modulos/Reportes/Validacion/` | Validar el reporte eslabón por eslabón; el apoyo arma una cadena más corta con los mismos eslabones |
+| Template Method | Comportamiento | `Modulos/Reportes/AccionesVecino/AccionDelVecino.cs` y `Acciones.cs` | Toda acción con código y clave verifica primero el acceso y luego hace lo suyo (seguimiento, revisión, conformidad, token) |
 
 ## Endpoints
 
@@ -26,6 +29,10 @@ el dueño de las tablas: esta API no crea migraciones.
 | POST | `/api/v1/publico/seguimiento` | Público, máx. 10 por IP por minuto |
 | POST | `/api/v1/publico/revisiones` (pedir revisión de un cierre, hasta 15 días) | Público con código y clave, máx. 10 por IP por minuto |
 | GET | `/api/v1/publico/mapa` (GeoJSON anónimo, ubicación aproximada) | Público, máx. 10 por IP por minuto |
+| POST | `/api/v1/publico/conformidad` (el vecino confirma o no la solución, hasta 15 días) | Público con código y clave, máx. 10 por IP por minuto |
+| PATCH | `/api/v1/publico/dispositivo` (guardar o quitar el token del celular para los avisos push) | Público con código y clave, máx. 10 por IP por minuto |
+| GET | `/api/v1/publico/casos/cercanos?categoria=&latitud=&longitud=` (casos abiertos en el radio de la categoría, sin datos personales) | Público, máx. 10 por IP por minuto |
+| POST | `/api/v1/publico/casos/{casoId}/apoyos` (apoyar un caso cercano, sin foto; recibe su propio código y clave) | Público, solo dentro del radio del caso, máx. 10 por IP cada 10 min |
 | POST | `/api/v1/panel/auth/login` | Público, máx. 5 por IP por minuto |
 | GET | `/api/v1/panel/auth/yo` | Funcionario con token |
 | GET | `/api/v1/panel/casos` y `/api/v1/panel/casos/{id}` | Supervisor |
@@ -52,6 +59,7 @@ el dueño de las tablas: esta API no crea migraciones.
 | `Mailgun:Dominio`, `Mailgun:ApiKey`, `Mailgun:Remitente`, `Mailgun:UrlBase` | No | Avisos por correo; sin ellos no se envían |
 | `Cors:Origenes` | No | Orígenes web permitidos (panel) |
 | `Vencimientos:Minutos` | No | Cada cuánto se marcan los casos vencidos (por defecto, 15) |
+| `Proxy:DetrasDeRender` | Solo en Render (`true`) | Lee la IP real del vecino desde el proxy de Render, para que los límites por IP funcionen. No activarlo fuera de Render |
 
 En Render, los dos puntos se escriben como doble guion bajo: `ConnectionStrings__Fixa`, `Jwt__Clave`.
 
@@ -62,6 +70,19 @@ en hora de Bolivia aunque el servidor de PostgreSQL esté en UTC.
 **Vencidos:** un proceso en segundo plano marca los casos abiertos con la fecha objetivo pasada
 y deja el evento en el historial. Como Render gratis se apaga sin tráfico, la bandeja y los
 indicadores también lo revisan antes de mostrar datos.
+
+## Base de datos: el esquema es de Laravel
+
+Todas las tablas, columnas, índices, triggers y políticas RLS se crean con migraciones del
+proyecto Laravel ([FIXA_back](https://github.com/helendrg14-em/FIXA_back)). Esta API solo lee y
+escribe datos.
+
+1. Si una función nueva necesita una tabla o columna, primero se agrega como migración en Laravel.
+2. Después se actualiza a mano el modelo de Entity Framework para que coincida. Aquí nunca se usan
+   `dotnet ef migrations` ni `EnsureCreated`.
+3. Se regenera `Fixa.Api.Tests/Datos/schema.sql` (ver "Pruebas automáticas y CI"). Si no, las
+   pruebas corren contra un esquema viejo y pueden pasar aunque en producción falle.
+4. Al desplegar, primero se ejecutan las migraciones de Laravel contra Supabase y después esta API.
 
 ## Ejecutar
 
@@ -112,3 +133,6 @@ docker exec fixa_laravel-db-1 pg_dump -U fixa -d fixa --schema-only --no-owner -
 - Contraseñas y claves de consulta con bcrypt, verificadas en tiempo constante y con el mismo mensaje de error.
 - Límites de peticiones por IP, cabeceras de seguridad, HSTS en producción y errores sin detalles internos.
 - Fotos revisadas por su contenido real (JPG, PNG o WebP), máximo 3 de 3 MB.
+- Detrás del proxy de Render, la IP real del vecino se lee solo del último salto (`ForwardLimit = 1`), así no se puede falsificar.
+- Apoyar un caso exige estar dentro de su radio de cercanía, para que nadie infle los apoyos desde lejos (OWASP API6).
+- Consultas geográficas con parámetros (nunca texto pegado en el SQL); los casos cercanos no muestran códigos, descripciones ni contactos (RN-07).

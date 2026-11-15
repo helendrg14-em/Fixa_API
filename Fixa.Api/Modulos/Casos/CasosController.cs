@@ -18,17 +18,21 @@ public record SolicitudVinculacion([Range(1, long.MaxValue)] long CasoPrincipalI
 public record SolicitudRespuestaRevision(bool Aceptar, [StringLength(1000)] string? Respuesta);
 
 /// <summary>
-/// Gestión de casos del supervisor. Cada acción delega en la fachada
+/// Gestión de casos del supervisor (solo su unidad) y del administrador (todas). Cada acción delega en la fachada
 /// GestorCasos; el controlador solo traduce la petición y la respuesta.
 /// </summary>
 [ApiController]
-[Authorize(Roles = Roles.Supervisor)]
+[Authorize(Roles = $"{Roles.Supervisor},{Roles.Administrador}")]
 [Route("api/v1/panel/casos")]
 public class CasosController(FixaDbContext db, GestorCasos gestor, ControlVencimientos vencimientos) : ControllerBase
 {
     private const int TamanoPagina = 20;
 
+    // Id del supervisor o del administrador que hace la acción (queda en el historial).
     private long SupervisorId => ServicioAutenticacion.Instancia.IdUsuario(User);
+
+    /// <summary>El administrador ve y trabaja los casos de todas las unidades.</summary>
+    private bool EsAdministrador => User.IsInRole(Roles.Administrador);
 
     private Task<long?> UnidadAsync(CancellationToken cancelacion) =>
         db.Usuarios.Where(u => u.Id == SupervisorId).Select(u => u.UnidadId).FirstOrDefaultAsync(cancelacion);
@@ -39,7 +43,8 @@ public class CasosController(FixaDbContext db, GestorCasos gestor, ControlVencim
     {
         await vencimientos.MarcarAsync(cancelacion); // la bandeja siempre muestra los vencidos al día
         var unidad = await UnidadAsync(cancelacion);
-        var consulta = db.Casos.AsNoTracking().Where(c => c.UnidadId == unidad && unidad != null);
+        var esAdmin = EsAdministrador;
+        var consulta = db.Casos.AsNoTracking().Where(c => (esAdmin || (unidad != null && c.UnidadId == unidad)));
         if (estado is not null)
         {
             if (!ValoresBd.TryDesdeBd<EstadoCaso>(estado, out var filtro))
@@ -60,8 +65,9 @@ public class CasosController(FixaDbContext db, GestorCasos gestor, ControlVencim
     public async Task<IActionResult> Detalle(long id, CancellationToken cancelacion)
     {
         var unidad = await UnidadAsync(cancelacion);
+        var esAdmin = EsAdministrador;
         var caso = await db.Casos.AsNoTracking()
-            .Where(c => c.Id == id && c.UnidadId == unidad && unidad != null)
+            .Where(c => c.Id == id && (esAdmin || (unidad != null && c.UnidadId == unidad)))
             .Select(c => new
             {
                 c.Id, c.Estado, c.Prioridad, c.JustificacionPrioridad, c.FechaCreacion, c.FechaObjetivo, c.FechaCierre, c.Vencido,
@@ -132,7 +138,8 @@ public class CasosController(FixaDbContext db, GestorCasos gestor, ControlVencim
     public async Task<IActionResult> Cercanos(long id, CancellationToken cancelacion)
     {
         var unidad = await UnidadAsync(cancelacion);
-        if (!await db.Casos.AnyAsync(c => c.Id == id && c.UnidadId == unidad && unidad != null, cancelacion))
+        var esAdmin = EsAdministrador;
+        if (!await db.Casos.AnyAsync(c => c.Id == id && (esAdmin || (unidad != null && c.UnidadId == unidad)), cancelacion))
             throw new NoEncontradoException("El caso no existe o no es de tu unidad.");
 
         // ST_DWithin con geography mide en metros; el radio sale de categorias.radio_cercania_m.
@@ -170,8 +177,9 @@ public class CasosController(FixaDbContext db, GestorCasos gestor, ControlVencim
     public async Task<IActionResult> Revisiones(CancellationToken cancelacion)
     {
         var unidad = await UnidadAsync(cancelacion);
+        var esAdmin = EsAdministrador;
         var pendientes = await db.SolicitudesRevision.AsNoTracking()
-            .Where(s => s.Estado == EstadoResolucion.Pendiente.ABd() && unidad != null && s.Reporte.Caso.UnidadId == unidad)
+            .Where(s => s.Estado == EstadoResolucion.Pendiente.ABd() && (esAdmin || (unidad != null && s.Reporte.Caso.UnidadId == unidad)))
             .OrderBy(s => s.FechaSolicitud)
             .Select(s => new { s.Id, casoId = s.Reporte.CasoId, s.Reporte.Codigo, s.Motivo, s.FechaSolicitud, s.Reporte.Caso.FechaCierre })
             .ToListAsync(cancelacion);

@@ -25,7 +25,8 @@ public sealed class ReporteBuilder(FixaDbContext db, IAlmacenFotos almacen, Cate
 {
     private double? latitud, longitud;
     private int? numeroLuminarias;
-    private string? tipo, descripcion, direccion, referencia, avisoCobranza, correo, tokenDispositivo, claveIdempotencia;
+    private string? tipo, descripcion, direccion, referencia, avisoCobranza, correo, tokenDispositivo, claveIdempotencia, motivoSinFoto;
+    private long? funcionarioId;
     private IReadOnlyCollection<IFormFile> fotos = [];
 
     public ReporteBuilder EnUbicacion(double? lat, double? lon) { latitud = lat; longitud = lon; return this; }
@@ -37,6 +38,14 @@ public sealed class ReporteBuilder(FixaDbContext db, IAlmacenFotos almacen, Cate
     public ReporteBuilder ConContacto(string? correoContacto, string? token) { correo = Limpiar(correoContacto)?.ToLowerInvariant(); tokenDispositivo = Limpiar(token); return this; }
     public ReporteBuilder ConFotos(IReadOnlyCollection<IFormFile> archivos) { fotos = archivos; return this; }
     public ReporteBuilder ConClaveIdempotencia(string? clave) { claveIdempotencia = clave; return this; }
+
+    /// <summary>Reporte asistido: un funcionario lo registra desde el panel por teléfono o en ventanilla (R07).</summary>
+    public ReporteBuilder RegistradoPor(long funcionario, string? motivoSinFotos)
+    {
+        funcionarioId = funcionario;
+        motivoSinFoto = Limpiar(motivoSinFotos);
+        return this;
+    }
 
     public async Task<ReporteRegistrado> RegistrarAsync(CancellationToken cancelacion)
     {
@@ -81,8 +90,15 @@ public sealed class ReporteBuilder(FixaDbContext db, IAlmacenFotos almacen, Cate
             CorreoContacto: correo,
             TokenDispositivo: tokenDispositivo));
 
-        // RN-02: la foto es obligatoria desde la app; solo el registro asistido (versión futura) puede omitirla.
-        ValidadorFoto.Validar(fotos, obligatoria: canal is CanalOrigen.AppMovil or CanalOrigen.Web);
+        // RN-02: la foto es obligatoria desde la app; solo el registro asistido puede omitirla, con motivo.
+        var asistido = canal is CanalOrigen.Telefono or CanalOrigen.Presencial;
+        ValidadorFoto.Validar(fotos, obligatoria: !asistido);
+        if (asistido && funcionarioId is null)
+            throw new ReglaNegocioException("El registro por teléfono o en ventanilla lo hace un funcionario.");
+        if (asistido && fotos.Count == 0 && (motivoSinFoto is null || motivoSinFoto.Length < 5))
+            throw new ReglaNegocioException("Indica por qué el reporte no tiene foto.");
+        if (motivoSinFoto is { Length: > 200 })
+            throw new ReglaNegocioException("El motivo sin foto no puede pasar de 200 caracteres.");
     }
 
     private Task<ReporteRegistrado?> BuscarExistenteAsync(CancellationToken cancelacion) =>
@@ -117,6 +133,8 @@ public sealed class ReporteBuilder(FixaDbContext db, IAlmacenFotos almacen, Cate
             CorreoContacto = correo,
             TokenDispositivo = tokenDispositivo,
             ClaveIdempotencia = claveIdempotencia!,
+            OperadorId = funcionarioId,
+            MotivoSinFoto = fotos.Count == 0 ? motivoSinFoto : null,
             FotosReporte = guardadas.Select(f => new FotoReporte { Url = f.Url, PublicId = f.PublicId }).ToList(),
         };
         db.Reportes.Add(reporte);
@@ -126,6 +144,7 @@ public sealed class ReporteBuilder(FixaDbContext db, IAlmacenFotos almacen, Cate
             Tipo = TipoEvento.Registro.ABd(),
             EstadoNuevo = EstadoCaso.Recibida.ABd(),
             Detalle = $"Reporte {reporte.Codigo} registrado por {canal.ABd()}.",
+            UsuarioId = funcionarioId,
         });
 
         await db.SaveChangesAsync(cancelacion);

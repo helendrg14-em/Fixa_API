@@ -1,0 +1,8 @@
+**/bin/
+**/obj/
+.git/
+.github/
+Fixa.Api.Tests/
+diagramas/
+**/*.user
+**/appsettings.Development.json

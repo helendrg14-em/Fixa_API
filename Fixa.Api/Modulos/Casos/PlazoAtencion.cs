@@ -6,12 +6,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Fixa.Api.Modulos.Casos;
 
-/// <summary>
-/// Patrón Strategy — Contexto: calcula la fecha objetivo de un caso con la meta de atención
-/// vigente de su categoría y prioridad (RN-06). No sabe calcular plazos: según la meta, elige la
-/// estrategia (horas corridas o días hábiles) y le delega el cálculo. Una forma nueva de medir
-/// plazos solo agrega su clase en Plazos/ y una línea en ElegirEstrategia.
-/// </summary>
 public sealed class PlazoAtencion(FixaDbContext db)
 {
     public async Task<DateTime?> FechaObjetivoAsync(long categoriaId, Prioridad prioridad, CancellationToken cancelacion)

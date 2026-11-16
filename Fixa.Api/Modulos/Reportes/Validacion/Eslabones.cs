@@ -3,9 +3,6 @@ using Fixa.Api.Modulos.Reportes.Categorias;
 
 namespace Fixa.Api.Modulos.Reportes.Validacion;
 
-// Patrón Chain of Responsibility — Manejadores concretos. Cada uno revisa una sola regla.
-
-/// <summary>Ubicación, tipo, descripción y datos propios de la categoría (usa el Factory Method).</summary>
 public sealed class ValidarDatosDeCategoria : EslabonValidacion
 {
     protected override void Revisar(DatosAValidar datos, List<string> errores)
@@ -19,10 +16,6 @@ public sealed class ValidarDatosDeCategoria : EslabonValidacion
     }
 }
 
-/// <summary>
-/// La clave de idempotencia la genera la app una vez por envío: si el celular reenvía la misma
-/// solicitud (por ejemplo, porque se cortó la conexión), no se crea un segundo caso.
-/// </summary>
 public sealed class ValidarClaveIdempotencia : EslabonValidacion
 {
     public const int LargoMinimo = 8, LargoMaximo = 64;
@@ -49,7 +42,6 @@ public sealed class ValidarDireccion : EslabonValidacion
     }
 }
 
-/// <summary>Correo y token del celular son opcionales; si vienen, deben tener un formato válido.</summary>
 public sealed class ValidarContacto : EslabonValidacion
 {
     public const int LargoMaximoCorreo = 120, LargoMaximoToken = 255;
@@ -64,10 +56,8 @@ public sealed class ValidarContacto : EslabonValidacion
     }
 }
 
-/// <summary>Arma las cadenas de cada flujo en un solo lugar.</summary>
 public static class CadenasDeValidacion
 {
-    /// <summary>Reporte nuevo: categoría → idempotencia → dirección → contacto.</summary>
     public static EslabonValidacion ParaReporteNuevo()
     {
         var primero = new ValidarDatosDeCategoria();
@@ -77,7 +67,6 @@ public static class CadenasDeValidacion
         return primero;
     }
 
-    /// <summary>Apoyo a un caso existente: solo idempotencia → contacto (el caso ya tiene sus datos).</summary>
     public static EslabonValidacion ParaApoyo()
     {
         var primero = new ValidarClaveIdempotencia();
@@ -85,7 +74,6 @@ public static class CadenasDeValidacion
         return primero;
     }
 
-    /// <summary>Corre la cadena y, si hubo errores, los devuelve todos juntos como regla de negocio (422).</summary>
     public static void Exigir(this EslabonValidacion cadena, DatosAValidar datos)
     {
         var errores = new List<string>();

@@ -35,15 +35,16 @@ el dueño de las tablas: esta API no crea migraciones.
 | POST | `/api/v1/publico/casos/{casoId}/apoyos` (apoyar un caso cercano, sin foto; recibe su propio código y clave) | Público, solo dentro del radio del caso, máx. 10 por IP cada 10 min |
 | POST | `/api/v1/panel/auth/login` | Público, máx. 5 por IP por minuto |
 | GET | `/api/v1/panel/auth/yo` | Funcionario con token |
-| GET | `/api/v1/panel/casos` y `/api/v1/panel/casos/{id}` | Supervisor |
-| PATCH | `/api/v1/panel/casos/{id}/estado` y `/prioridad` | Supervisor |
-| POST | `/api/v1/panel/casos/{id}/programaciones` y `/derivaciones` | Supervisor |
-| POST | `/api/v1/panel/casos/intervenciones/{id}/validacion` | Supervisor |
-| PATCH | `/api/v1/panel/casos/{id}/categoria` (corregir categoría; el caso pasa a su unidad) | Supervisor |
-| GET | `/api/v1/panel/casos/{id}/cercanos` (posibles duplicados) | Supervisor |
-| POST | `/api/v1/panel/casos/{id}/vinculacion` (marcar duplicado de un caso principal) | Supervisor |
-| GET | `/api/v1/panel/casos/revisiones` y POST `/api/v1/panel/casos/revisiones/{id}` | Supervisor |
+| GET | `/api/v1/panel/casos` y `/api/v1/panel/casos/{id}` | Supervisor (su unidad) y administrador (todas) |
+| PATCH | `/api/v1/panel/casos/{id}/estado` y `/prioridad` | Supervisor (su unidad) y administrador (todas) |
+| POST | `/api/v1/panel/casos/{id}/programaciones` y `/derivaciones` | Supervisor (su unidad) y administrador (todas) |
+| POST | `/api/v1/panel/casos/intervenciones/{id}/validacion` | Supervisor (su unidad) y administrador (todas) |
+| PATCH | `/api/v1/panel/casos/{id}/categoria` (corregir categoría; el caso pasa a su unidad) | Supervisor (su unidad) y administrador (todas) |
+| GET | `/api/v1/panel/casos/{id}/cercanos` (posibles duplicados) | Supervisor (su unidad) y administrador (todas) |
+| POST | `/api/v1/panel/casos/{id}/vinculacion` (marcar duplicado de un caso principal) | Supervisor (su unidad) y administrador (todas) |
+| GET | `/api/v1/panel/casos/revisiones` y POST `/api/v1/panel/casos/revisiones/{id}` | Supervisor (su unidad) y administrador (todas) |
 | GET | `/api/v1/panel/indicadores` y `/api/v1/panel/mapa` (`?desde=&hasta=&distritoId=&categoria=`) | Supervisor (su unidad) y administrador (todas) |
+| POST | `/api/v1/panel/reportes` (multipart; registro por teléfono o en ventanilla, `canal` telefono o presencial, foto o `motivoSinFoto`) | Administrador |
 | GET | `/api/v1/panel/ordenes` | Técnico (casos programados para su cuadrilla) |
 | POST | `/api/v1/panel/ordenes/{casoId}/inicio` | Técnico |
 | POST | `/api/v1/panel/ordenes/{casoId}/intervenciones` (multipart, con evidencia) | Técnico, máx. 10 por IP cada 10 min |

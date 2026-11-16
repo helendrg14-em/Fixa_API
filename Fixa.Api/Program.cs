@@ -19,7 +19,7 @@ builder.WebHost.ConfigureKestrel(kestrel => kestrel.Limits.MaxRequestBodySize = 
 // sesión en America/La_Paz, los valores por defecto de la base (CURRENT_TIMESTAMP) también lo
 // están, aunque el servidor de PostgreSQL esté en UTC (Docker, Neon, Supabase).
 var conexion = new NpgsqlConnectionStringBuilder(builder.Configuration.GetConnectionString("Fixa")) { Timezone = "America/La_Paz" };
-builder.Services.AddDbContext<FixaDbContext>(opciones => opciones.UseNpgsql(
+builder.Services.AddDbContextPool<FixaDbContext>(opciones => opciones.UseNpgsql(
     conexion.ConnectionString,
     npgsql => npgsql.UseNetTopologySuite()));
 
@@ -64,7 +64,7 @@ builder.Services.AddLimitesDePeticiones();
 builder.Services.AddProxyDeConfianza(builder.Configuration);
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<ManejadorErrores>();
-builder.Services.AddControllers();
+ValidacionEnEspanol.AddControllersEnEspanol(builder.Services);
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
@@ -91,6 +91,11 @@ app.UseCors();
 app.UseAuthentication();
 app.UseRateLimiter();
 app.UseAuthorization();
+
+// Render la consulta para saber si la API está viva; el panel y la app, para despertarla.
+app.MapGet("/salud", async (FixaDbContext db, CancellationToken cancelacion) =>
+    await db.Database.CanConnectAsync(cancelacion) ? Results.Ok(new { estado = "ok" }) : Results.StatusCode(StatusCodes.Status503ServiceUnavailable))
+    .AllowAnonymous().ExcludeFromDescription();
 
 app.MapControllers();
 

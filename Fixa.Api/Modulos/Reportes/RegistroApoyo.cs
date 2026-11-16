@@ -74,7 +74,7 @@ public sealed class RegistroApoyo(FixaDbContext db)
             Ubicacion = original.Ubicacion,
             TipoIncidencia = original.TipoIncidencia,
             Codigo = await CodigoSeguimiento.SiguienteAsync(db, cancelacion),
-            ClaveHash = VerificadorClave.Hash(clave),
+            ClaveHash = VerificadorClave.Hash(clave, VerificadorClave.CostoClaveVecino),
             Descripcion = "Apoyo de un vecino al caso existente.",
             CanalOrigen = CanalOrigen.AppMovil.ABd(),
             EsApoyo = true,

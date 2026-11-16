@@ -45,7 +45,7 @@ public abstract class AccionDelVecino<TResultado>(FixaDbContext db)
             .Select(registro => new { registro.Id, registro.ClaveHash })
             .FirstOrDefaultAsync(cancelacion);
 
-        var claveCorrecta = VerificadorClave.Verificar(clave.Trim().ToUpperInvariant(), reporte?.ClaveHash);
+        var claveCorrecta = VerificadorClave.Verificar(clave.Trim().ToUpperInvariant(), reporte?.ClaveHash, VerificadorClave.CostoClaveVecino);
         return claveCorrecta ? reporte!.Id : null;
     }
 }

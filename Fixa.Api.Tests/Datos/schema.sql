@@ -677,43 +677,6 @@ ALTER SEQUENCE public.notificaciones_id_seq OWNED BY public.notificaciones.id;
 
 
 --
--- Name: personal_access_tokens; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.personal_access_tokens (
-    id bigint NOT NULL,
-    tokenable_type character varying(255) NOT NULL,
-    tokenable_id bigint NOT NULL,
-    name text NOT NULL,
-    token character varying(64) NOT NULL,
-    abilities text,
-    last_used_at timestamp(0) without time zone,
-    expires_at timestamp(0) without time zone,
-    created_at timestamp(0) without time zone,
-    updated_at timestamp(0) without time zone
-);
-
-
---
--- Name: personal_access_tokens_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.personal_access_tokens_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: personal_access_tokens_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.personal_access_tokens_id_seq OWNED BY public.personal_access_tokens.id;
-
-
---
 -- Name: programaciones; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1037,13 +1000,6 @@ ALTER TABLE ONLY public.notificaciones ALTER COLUMN id SET DEFAULT nextval('publ
 
 
 --
--- Name: personal_access_tokens id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.personal_access_tokens ALTER COLUMN id SET DEFAULT nextval('public.personal_access_tokens_id_seq'::regclass);
-
-
---
 -- Name: programaciones id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -1279,22 +1235,6 @@ ALTER TABLE ONLY public.notificaciones
 
 
 --
--- Name: personal_access_tokens personal_access_tokens_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.personal_access_tokens
-    ADD CONSTRAINT personal_access_tokens_pkey PRIMARY KEY (id);
-
-
---
--- Name: personal_access_tokens personal_access_tokens_token_unique; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.personal_access_tokens
-    ADD CONSTRAINT personal_access_tokens_token_unique UNIQUE (token);
-
-
---
 -- Name: programaciones programaciones_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1526,20 +1466,6 @@ CREATE INDEX notificaciones_evento_id_index ON public.notificaciones USING btree
 --
 
 CREATE INDEX notificaciones_reporte_id_index ON public.notificaciones USING btree (reporte_id);
-
-
---
--- Name: personal_access_tokens_expires_at_index; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX personal_access_tokens_expires_at_index ON public.personal_access_tokens USING btree (expires_at);
-
-
---
--- Name: personal_access_tokens_tokenable_type_tokenable_id_index; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX personal_access_tokens_tokenable_type_tokenable_id_index ON public.personal_access_tokens USING btree (tokenable_type, tokenable_id);
 
 
 --

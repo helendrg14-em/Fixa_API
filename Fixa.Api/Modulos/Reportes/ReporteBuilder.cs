@@ -121,7 +121,7 @@ public sealed class ReporteBuilder(FixaDbContext db, IAlmacenFotos almacen, Cate
             Caso = caso,
             DistritoId = distritoId,
             Codigo = await CodigoSeguimiento.SiguienteAsync(db, cancelacion),
-            ClaveHash = VerificadorClave.Hash(clave),
+            ClaveHash = VerificadorClave.Hash(clave, VerificadorClave.CostoClaveVecino),
             Descripcion = descripcion!,
             CanalOrigen = canal.ABd(),
             TipoIncidencia = tipo!,

@@ -23,6 +23,7 @@ el dueño de las tablas: esta API no crea migraciones.
 
 | Método | Ruta | Acceso |
 |---|---|---|
+| GET | `/salud` (comprueba la base; Render la usa como health check y el panel y la app, para despertar la API) | Público |
 | GET | `/api/v1/publico/categorias` | Público |
 | GET | `/api/v1/publico/categorias/{codigo}/tipos` | Público |
 | POST | `/api/v1/publico/reportes` (multipart, con fotos) | Público, máx. 10 por IP cada 10 min |
@@ -85,16 +86,52 @@ escribe datos.
    pruebas corren contra un esquema viejo y pueden pasar aunque en producción falle.
 4. Al desplegar, primero se ejecutan las migraciones de Laravel contra Supabase y después esta API.
 
+## Qué instalar (una sola vez)
+
+| Programa | Para qué | Cómo comprobarlo |
+|---|---|---|
+| [.NET SDK 10](https://dotnet.microsoft.com/download/dotnet/10.0) | Compilar y ejecutar la API | `dotnet --version` (10.x) |
+| [Docker Desktop](https://www.docker.com/products/docker-desktop) | La base de datos y las pruebas | `docker --version` |
+| El proyecto [FIXA_back](https://github.com/helendrg14-em/FIXA_back) ya en marcha | Crea la base y sus tablas | Su README, pasos 1 y 2 |
+
+La API **no tiene base propia**: usa la que levanta Laravel con `docker compose` (puerto 5433).
+Por eso, primero se pone en marcha FIXA_back y después esta API.
+
+Para editar sirve VS Code con la extensión **C# Dev Kit**, o Visual Studio 2022 o superior.
+
 ## Ejecutar
 
 ```bash
-cd Fixa.Api
-dotnet user-secrets set "ConnectionStrings:Fixa" "Host=127.0.0.1;Port=5433;Database=fixa;Username=fixa;Password=..."
-dotnet user-secrets set "Jwt:Clave" "..."
+git clone https://github.com/helendrg14-em/Fixa_API.git
+cd Fixa_API/Fixa.Api
+```
+
+Las credenciales van en **User Secrets**, que se guardan fuera del repositorio. Usa los mismos
+datos `DB_*` de tu `.env` de Laravel:
+
+```bash
+dotnet user-secrets set "ConnectionStrings:Fixa" "Host=127.0.0.1;Port=5433;Database=fixa;Username=fixa;Password=la_de_tu_env"
+dotnet user-secrets set "Jwt:Clave" "una_clave_aleatoria_de_32_caracteres_o_más"
 dotnet run
 ```
 
-En desarrollo, la página de pruebas está en `http://localhost:5112/scalar`.
+- Comprobar que funciona: http://localhost:5112/salud debe responder `{"estado":"ok"}`.
+- Probar los endpoints: http://localhost:5112/scalar (solo en desarrollo).
+
+**Para conectar el panel**, copia la misma `Jwt:Clave` en el `.env` de Laravel como
+`FIXA_API_JWT_CLAVE` y pon `FIXA_API_URL=http://localhost:5112`.
+
+Cloudinary, Firebase y Mailgun son opcionales en tu PC: sin ellos la API arranca, pero no puede
+guardar fotos de reportes reales. Las pruebas automáticas no los necesitan.
+
+### Problemas comunes
+
+| Síntoma | Causa | Solución |
+|---|---|---|
+| `Jwt:Clave debe tener al menos 32 caracteres` | Falta el User Secret | Repite `dotnet user-secrets set "Jwt:Clave" ...` |
+| `/salud` responde 503 o hay error de conexión | La base de Docker no está encendida | En FIXA_back: `docker compose up -d --wait` |
+| `relation "categorias" does not exist` | La base está vacía | En FIXA_back: `php artisan migrate` y `php artisan db:seed` |
+| El panel dice "No se pudo completar la acción" | La clave del panel no es la misma | `FIXA_API_JWT_CLAVE` debe ser idéntica a `Jwt:Clave` |
 
 ## Pruebas automáticas y CI
 
@@ -123,15 +160,20 @@ El resultado está en la pestaña **Actions** del repositorio.
 
 **Si Laravel cambia una migración**, actualiza el esquema de las pruebas:
 
+Desde la carpeta de FIXA_back (funciona aunque tu carpeta tenga otro nombre), con los datos de tu `.env`:
+
 ```bash
-docker exec fixa_laravel-db-1 pg_dump -U fixa -d fixa --schema-only --no-owner --no-privileges --no-comments > Fixa.Api.Tests/Datos/schema.sql
+docker compose exec -T db pg_dump -U fixa -d fixa --schema-only --no-owner --no-privileges --no-comments > ../Fixa_API/Fixa.Api.Tests/Datos/schema.sql
 ```
+
+Ajusta `-U` y `-d` si tu `DB_USERNAME` o `DB_DATABASE` son distintos, y la ruta final si no clonaste los dos repositorios uno al lado del otro.
 
 ## Seguridad
 
 - Todo endpoint exige token salvo los marcados como públicos; una cuenta desactivada pierde el acceso al instante.
 - El supervisor solo ve y modifica los casos de su unidad; el técnico, solo los programados para su cuadrilla, y no puede cerrarlos (RN-04).
-- Contraseñas y claves de consulta con bcrypt, verificadas en tiempo constante y con el mismo mensaje de error.
+- Contraseñas (costo 12) y claves de consulta del vecino (costo 10, para que el seguimiento responda rápido) con bcrypt, verificadas en tiempo constante y con el mismo mensaje de error.
+- Errores de validación en español y sin detalles internos: un JSON mal formado no muestra tipos de C# ni posiciones.
 - Límites de peticiones por IP, cabeceras de seguridad, HSTS en producción y errores sin detalles internos.
 - Fotos revisadas por su contenido real (JPG, PNG o WebP), máximo 3 de 3 MB.
 - Detrás del proxy de Render, la IP real del vecino se lee solo del último salto (`ForwardLimit = 1`), así no se puede falsificar.

@@ -52,11 +52,13 @@ public partial class FixaDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder
-            .HasPostgresExtension("fuzzystrmatch")
-            .HasPostgresExtension("postgis")
-            .HasPostgresExtension("tiger", "postgis_tiger_geocoder")
-            .HasPostgresExtension("topology", "postgis_topology");
+        var esPostgreSql = Database.IsNpgsql();
+        if (esPostgreSql)
+            modelBuilder
+                .HasPostgresExtension("fuzzystrmatch")
+                .HasPostgresExtension("postgis")
+                .HasPostgresExtension("tiger", "postgis_tiger_geocoder")
+                .HasPostgresExtension("topology", "postgis_topology");
 
         modelBuilder.Entity<Caso>(entity =>
         {
@@ -222,7 +224,9 @@ public partial class FixaDbContext : DbContext
 
             entity.ToTable("distritos");
 
-            entity.HasIndex(e => e.Limite, "distritos_limite_spatialindex").HasMethod("gist");
+            // Índice espacial GiST: solo PostgreSQL (en SQL Server se crea en la migración).
+            if (esPostgreSql)
+                entity.HasIndex(e => e.Limite, "distritos_limite_spatialindex").HasMethod("gist");
 
             entity.HasIndex(e => e.Numero, "distritos_numero_unique").IsUnique();
 
@@ -513,7 +517,8 @@ public partial class FixaDbContext : DbContext
 
             entity.HasIndex(e => e.OperadorId, "reportes_operador_id_index");
 
-            entity.HasIndex(e => e.Ubicacion, "reportes_ubicacion_spatialindex").HasMethod("gist");
+            if (esPostgreSql)
+                entity.HasIndex(e => e.Ubicacion, "reportes_ubicacion_spatialindex").HasMethod("gist");
 
             entity.Property(e => e.Id).HasColumnName("id");
             entity.Property(e => e.CanalOrigen)

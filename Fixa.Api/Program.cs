@@ -14,11 +14,11 @@ var builder = WebApplication.CreateBuilder(args);
 // Ninguna petición puede superar 10 MB (el registro admite hasta 3 fotos de 3 MB).
 builder.WebHost.ConfigureKestrel(kestrel => kestrel.Limits.MaxRequestBodySize = 10 * 1024 * 1024);
 
-// Las fechas se guardan en hora local de Bolivia (convención de Laravel): ZonaHorariaBolivia
-// fija la zona de cada sesión, aunque el servidor de PostgreSQL esté en UTC (Docker, Supabase).
-builder.Services.AddDbContextPool<FixaDbContext>(opciones => opciones
-    .UseNpgsql(builder.Configuration.GetConnectionString("Fixa"), npgsql => npgsql.UseNetTopologySuite())
-    .AddInterceptors(new ZonaHorariaBolivia()));
+// PostgreSQL por defecto (producción); SQL Server con BaseDatos:Proveedor = "SqlServer".
+var usaSqlServer = ConfiguracionBaseDatos.UsaSqlServer(builder.Configuration);
+var conexionSqlServer = usaSqlServer ? ConfiguracionBaseDatos.ConexionSqlServer(builder.Configuration) : null;
+builder.Services.AddDbContextPool<FixaDbContext>(opciones =>
+    ConfiguracionBaseDatos.Configurar(opciones, builder.Configuration, conexionSqlServer));
 
 // Singleton: se configura una sola vez al arrancar, con la clave de User Secrets o de Render.
 ServicioAutenticacion.Instancia.Configurar(builder.Configuration["Jwt:Clave"]);
@@ -62,9 +62,17 @@ builder.Services.AddProxyDeConfianza(builder.Configuration);
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<ManejadorErrores>();
 ValidacionEnEspanol.AddControllersEnEspanol(builder.Services);
-builder.Services.AddOpenApi();
+builder.Services.AddOpenApi(openApi => openApi.AddDocumentTransformer<TokenEnOpenApi>());
 
 var app = builder.Build();
+
+// En SQL Server la API crea la base, sus tablas y los datos de prueba al iniciar. En PostgreSQL
+// no: ahí el esquema es de las migraciones de Laravel.
+if (usaSqlServer)
+{
+    using var alcance = app.Services.CreateScope();
+    alcance.ServiceProvider.GetRequiredService<FixaDbContext>().Database.Migrate();
+}
 
 // Primero: la IP real del vecino y el esquema https, antes de cualquier límite o redirección.
 app.UseProxyDeConfianza();
@@ -76,6 +84,12 @@ if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi().AllowAnonymous();
     app.MapScalarApiReference().AllowAnonymous();
+    // Swagger UI sobre el mismo documento OpenAPI.
+    app.UseSwaggerUI(swagger =>
+    {
+        swagger.SwaggerEndpoint("/openapi/v1.json", "FIXA API v1");
+        swagger.DocumentTitle = "FIXA API";
+    });
     app.MapGet("/", () => Results.Redirect("/scalar")).ExcludeFromDescription().AllowAnonymous();
 }
 else

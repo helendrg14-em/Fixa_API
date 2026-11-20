@@ -7,7 +7,7 @@ namespace Fixa.Api.Modulos.Indicadores;
 
 /// <summary>
 /// Consultas de solo lectura para indicadores y mapa (por categoría, distrito y periodo). Los
-/// conteos se hacen en PostgreSQL, no en memoria, para que sigan rápidos con muchos casos.
+/// conteos se hacen en la base, no en memoria, para que sigan rápidos con muchos casos.
 /// </summary>
 public sealed class ConsultaIndicadores(FixaDbContext db)
 {
@@ -29,9 +29,11 @@ public sealed class ConsultaIndicadores(FixaDbContext db)
             cerradosDentroDeMeta = g.Count(c => c.Estado == cerrada && c.FechaObjetivo != null && c.FechaCierre <= c.FechaObjetivo),
             cerradosConMeta = g.Count(c => c.Estado == cerrada && c.FechaObjetivo != null),
             vencidosAbiertos = g.Count(c => c.Vencido && !EstadoCasoReglas.FinalesBd.Contains(c.Estado)),
-            promedioHorasCierre = g.Where(c => c.Estado == cerrada && c.FechaCierre != null)
-                .Average(c => (double?)(c.FechaCierre!.Value - c.FechaCreacion).TotalHours),
         }).FirstOrDefaultAsync(cancelacion);
+
+        // La resta de fechas se escribe distinto en cada motor (ver IConsultasMotor).
+        var promedioHorasCierre = await db.Consultas.PromedioHorasCierreAsync(
+            casos.Where(c => c.Estado == cerrada && c.FechaCierre != null), cancelacion);
 
         return new
         {
@@ -44,7 +46,7 @@ public sealed class ConsultaIndicadores(FixaDbContext db)
             porcentajeDentroDeMeta = totales is { cerradosConMeta: > 0 }
                 ? Math.Round(100.0 * totales.cerradosDentroDeMeta / totales.cerradosConMeta, 1)
                 : (double?)null,
-            promedioHorasCierre = totales?.promedioHorasCierre is double horas ? Math.Round(horas, 1) : (double?)null,
+            promedioHorasCierre = promedioHorasCierre is double horas ? Math.Round(horas, 1) : (double?)null,
             porEstado = await casos.GroupBy(c => c.Estado)
                 .Select(g => new { estado = g.Key, cantidad = g.Count() }).OrderByDescending(x => x.cantidad).ToListAsync(cancelacion),
             porCategoria = await casos.GroupBy(c => c.Categoria.Nombre)

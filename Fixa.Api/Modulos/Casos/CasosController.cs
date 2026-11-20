@@ -142,19 +142,8 @@ public class CasosController(FixaDbContext db, GestorCasos gestor, ControlVencim
         if (!await db.Casos.AnyAsync(c => c.Id == id && (esAdmin || (unidad != null && c.UnidadId == unidad)), cancelacion))
             throw new NoEncontradoException("El caso no existe o no es de tu unidad.");
 
-        // ST_DWithin con geography mide en metros; el radio sale de categorias.radio_cercania_m.
-        var ids = await db.Database.SqlQuery<long>($"""
-            SELECT DISTINCT otro.caso_id AS "Value"
-            FROM reportes propio
-            JOIN casos caso ON caso.id = propio.caso_id
-            JOIN categorias cat ON cat.id = caso.categoria_id
-            JOIN reportes otro ON otro.caso_id <> propio.caso_id
-            JOIN casos candidato ON candidato.id = otro.caso_id
-            WHERE propio.caso_id = {id}
-              AND candidato.categoria_id = caso.categoria_id
-              AND candidato.estado <> ALL({EstadoCasoReglas.FinalesBd})
-              AND ST_DWithin(propio.ubicacion::geography, otro.ubicacion::geography, cat.radio_cercania_m)
-            """).ToListAsync(cancelacion);
+        // Distancia en metros; el radio sale de categorias.radio_cercania_m.
+        var ids = await db.Consultas.CasosCercanosAlCasoAsync(id, cancelacion);
 
         var cercanos = await db.Casos.AsNoTracking()
             .Where(c => ids.Contains(c.Id))

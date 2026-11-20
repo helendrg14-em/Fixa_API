@@ -37,11 +37,7 @@ public static class CodigoSeguimiento
     public static async Task<string> SiguienteAsync(FixaDbContext db, CancellationToken cancelacion)
     {
         var anio = HoraBolivia.Hoy().Year;
-        var numero = await db.Database.SqlQuery<int>($"""
-            INSERT INTO contadores_codigo (anio, ultimo) VALUES ({anio}, 1)
-            ON CONFLICT (anio) DO UPDATE SET ultimo = contadores_codigo.ultimo + 1
-            RETURNING ultimo AS "Value"
-            """).ToListAsync(cancelacion);
-        return $"FX-{anio}-{numero[0]:D6}";
+        var numero = await db.Consultas.SiguienteNumeroAsync(anio, cancelacion);
+        return $"FX-{anio}-{numero:D6}";
     }
 }

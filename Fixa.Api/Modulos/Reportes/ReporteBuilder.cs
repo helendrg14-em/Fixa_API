@@ -7,7 +7,6 @@ using Fixa.Api.Modulos.Reportes.Categorias;
 using Fixa.Api.Modulos.Reportes.Validacion;
 using Microsoft.EntityFrameworkCore;
 using NetTopologySuite.Geometries;
-using Npgsql;
 
 namespace Fixa.Api.Modulos.Reportes;
 
@@ -71,7 +70,7 @@ public sealed class ReporteBuilder(FixaDbContext db, IAlmacenFotos almacen, Cate
         {
             return await GuardarAsync(punto, distritoId, guardadas, cancelacion);
         }
-        catch (DbUpdateException error) when (error.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
+        catch (DbUpdateException error) when (db.Consultas.EsValorRepetido(error))
         {
             // Dos envíos simultáneos con la misma clave: el otro ganó y este devuelve su reporte.
             db.ChangeTracker.Clear();

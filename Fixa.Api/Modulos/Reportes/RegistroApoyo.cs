@@ -4,7 +4,6 @@ using Fixa.Api.Infraestructura.Datos;
 using Fixa.Api.Infraestructura.Seguridad;
 using Fixa.Api.Modulos.Reportes.Validacion;
 using Microsoft.EntityFrameworkCore;
-using Npgsql;
 
 namespace Fixa.Api.Modulos.Reportes;
 
@@ -38,7 +37,7 @@ public sealed class RegistroApoyo(FixaDbContext db)
         {
             return await GuardarAsync(apoyo, correo, token, cancelacion);
         }
-        catch (DbUpdateException error) when (error.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
+        catch (DbUpdateException error) when (db.Consultas.EsValorRepetido(error))
         {
             // Dos envíos simultáneos con la misma clave: el otro ganó y este devuelve su apoyo.
             db.ChangeTracker.Clear();
@@ -51,8 +50,8 @@ public sealed class RegistroApoyo(FixaDbContext db)
     {
         await using var transaccion = await db.Database.BeginTransactionAsync(cancelacion);
 
-        // FOR UPDATE: el caso no puede cerrarse mientras alguien lo apoya.
-        var caso = await db.Casos.FromSql($"SELECT * FROM casos WHERE id = {apoyo.CasoId} FOR UPDATE").FirstOrDefaultAsync(cancelacion)
+        // Fila bloqueada: el caso no puede cerrarse mientras alguien lo apoya.
+        var caso = await db.Consultas.BloquearCasoAsync(apoyo.CasoId, cancelacion)
             ?? throw new NoEncontradoException("El caso no existe.");
         if (ValoresBd.DesdeBd<EstadoCaso>(caso.Estado).EsFinal())
             throw new ReglaNegocioException("Este caso ya no está abierto; si el problema sigue, registra un reporte nuevo.");
@@ -101,23 +100,8 @@ public sealed class RegistroApoyo(FixaDbContext db)
     /// El vecino debe estar dentro del radio de cercanía de la categoría (en metros, con geography).
     /// Evita que alguien infle los apoyos de cualquier caso desde lejos (OWASP API6).
     /// </summary>
-    private async Task<bool> EstaCercaDelCasoAsync(DatosApoyo apoyo, CancellationToken cancelacion)
-    {
-        var resultado = await db.Database.SqlQuery<bool>($"""
-            SELECT EXISTS (
-                SELECT 1
-                FROM reportes reporte
-                JOIN casos caso ON caso.id = reporte.caso_id
-                JOIN categorias categoria ON categoria.id = caso.categoria_id
-                WHERE reporte.caso_id = {apoyo.CasoId}
-                  AND ST_DWithin(
-                        reporte.ubicacion::geography,
-                        ST_SetSRID(ST_MakePoint({apoyo.Longitud}, {apoyo.Latitud}), 4326)::geography,
-                        categoria.radio_cercania_m)
-            ) AS "Value"
-            """).ToListAsync(cancelacion);
-        return resultado[0];
-    }
+    private Task<bool> EstaCercaDelCasoAsync(DatosApoyo apoyo, CancellationToken cancelacion) =>
+        db.Consultas.EstaCercaDelCasoAsync(apoyo.CasoId, apoyo.Longitud, apoyo.Latitud, cancelacion);
 
     private Task<ReporteRegistrado?> BuscarExistenteAsync(string claveIdempotencia, CancellationToken cancelacion) =>
         CodigoSeguimiento.YaRegistradoAsync(db, claveIdempotencia, cancelacion);

@@ -3,8 +3,9 @@
 # FIXA API
 
 API REST de FIXA en ASP.NET Core (.NET 10). La consumen la app del ciudadano y el panel web.
-Usa la misma base PostgreSQL + PostGIS que el proyecto Laravel (`FIXA_back`), que sigue siendo
-el dueño de las tablas: esta API no crea migraciones.
+En producción usa la misma base PostgreSQL + PostGIS que el proyecto Laravel (`FIXA_back`), que
+es el dueño de esas tablas. También funciona con **SQL Server**: ahí el esquema lo crean las
+migraciones de Entity Framework Core de esta API (ver "Ejecutar con SQL Server").
 
 ## Patrones de diseño
 
@@ -16,6 +17,7 @@ el dueño de las tablas: esta API no crea migraciones.
 | Adapter | Estructural | `Infraestructura/Fotos/CloudinaryAdapter.cs`, `Infraestructura/Notificaciones/FirebaseAdapter.cs`, `MailgunAdapter.cs` | Servicios externos detrás de interfaces propias (`IAlmacenFotos`, `ICanalNotificacion`) |
 | Facade | Estructural | `Modulos/Casos/GestorCasos.cs` | Una sola puerta para gestionar casos: estados (RN-03), historial, plazos y avisos |
 | Strategy | Comportamiento | `Modulos/Casos/PlazoAtencion.cs` (contexto) y `Modulos/Casos/Plazos/` | Calcular la fecha objetivo en horas corridas o en días hábiles según la meta (RN-06) |
+| Strategy | Comportamiento | `Infraestructura/Datos/Consultas/` (`IConsultasMotor`) | Las consultas propias de cada motor (bloqueo de filas, contador, distancias en metros) en PostgreSQL o SQL Server |
 | Chain of Responsibility | Comportamiento | `Modulos/Reportes/Validacion/` | Validar el reporte eslabón por eslabón; el apoyo arma una cadena más corta con los mismos eslabones |
 | Template Method | Comportamiento | `Modulos/Reportes/AccionesVecino/AccionDelVecino.cs` y `Acciones.cs` | Toda acción con código y clave verifica primero el acceso y luego hace lo suyo (seguimiento, revisión, conformidad, token) |
 
@@ -54,7 +56,9 @@ el dueño de las tablas: esta API no crea migraciones.
 
 | Clave | Obligatoria | Uso |
 |---|---|---|
-| `ConnectionStrings:Fixa` | Sí | Conexión a PostgreSQL |
+| `BaseDatos:Proveedor` | No | `PostgreSQL` (por defecto) o `SqlServer`. En `appsettings.Development.json` vale `SqlServer` |
+| `ConnectionStrings:Fixa` | Con PostgreSQL | Conexión a PostgreSQL |
+| `ConnectionStrings:FixaSqlServer` | Con SQL Server | Conexión a SQL Server (ya viene en `appsettings.Development.json`, sin contraseña) |
 | `Jwt:Clave` | Sí | Firma de los tokens (32 caracteres o más) |
 | `Cloudinary:CloudName`, `Cloudinary:ApiKey`, `Cloudinary:ApiSecret` | Para registrar reportes | Fotos |
 | `Firebase:CredencialesJson` | No | Avisos push; sin ella no se envían |
@@ -73,15 +77,16 @@ en hora de Bolivia aunque el servidor de PostgreSQL esté en UTC.
 y deja el evento en el historial. Como Render gratis se apaga sin tráfico, la bandeja y los
 indicadores también lo revisan antes de mostrar datos.
 
-## Base de datos: el esquema es de Laravel
+## Base de datos: en PostgreSQL el esquema es de Laravel
 
-Todas las tablas, columnas, índices, triggers y políticas RLS se crean con migraciones del
-proyecto Laravel ([FIXA_back](https://github.com/helendrg14-em/FIXA_back)). Esta API solo lee y
-escribe datos.
+En PostgreSQL (producción), todas las tablas, columnas, índices, triggers y políticas RLS se
+crean con migraciones del proyecto Laravel ([FIXA_back](https://github.com/helendrg14-em/FIXA_back)).
+Ahí esta API solo lee y escribe datos.
 
 1. Si una función nueva necesita una tabla o columna, primero se agrega como migración en Laravel.
-2. Después se actualiza a mano el modelo de Entity Framework para que coincida. Aquí nunca se usan
-   `dotnet ef migrations` ni `EnsureCreated`.
+2. Después se actualiza a mano el modelo de Entity Framework para que coincida, y se regenera la
+   migración de SQL Server (`Infraestructura/Datos/MigracionesSqlServer`). Contra PostgreSQL nunca
+   se aplican migraciones de EF Core ni `EnsureCreated`.
 3. Se regenera `Fixa.Api.Tests/Datos/schema.sql` (ver "Pruebas automáticas y CI"). Si no, las
    pruebas corren contra un esquema viejo y pueden pasar aunque en producción falle.
 4. Al desplegar, primero se ejecutan las migraciones de Laravel contra Supabase y después esta API.
@@ -110,19 +115,78 @@ Las credenciales van en **User Secrets**, que se guardan fuera del repositorio. 
 datos `DB_*` de tu `.env` de Laravel:
 
 ```bash
+dotnet user-secrets set "BaseDatos:Proveedor" "PostgreSQL"
 dotnet user-secrets set "ConnectionStrings:Fixa" "Host=127.0.0.1;Port=5433;Database=fixa;Username=fixa;Password=la_de_tu_env"
 dotnet user-secrets set "Jwt:Clave" "una_clave_aleatoria_de_32_caracteres_o_más"
 dotnet run
 ```
 
+Sin `BaseDatos:Proveedor = PostgreSQL`, en desarrollo la API usa SQL Server (ver la sección siguiente).
+
 - Comprobar que funciona: http://localhost:5112/salud debe responder `{"estado":"ok"}`.
-- Probar los endpoints: http://localhost:5112/scalar (solo en desarrollo).
+- Probar los endpoints: http://localhost:5112/swagger o http://localhost:5112/scalar (solo en desarrollo).
 
 **Para conectar el panel**, copia la misma `Jwt:Clave` en el `.env` de Laravel como
 `FIXA_API_JWT_CLAVE` y pon `FIXA_API_URL=http://localhost:5112`.
 
 Cloudinary, Firebase y Mailgun son opcionales en tu PC: sin ellos la API arranca, pero no puede
 guardar fotos de reportes reales. Las pruebas automáticas no los necesitan.
+
+## Ejecutar con SQL Server (Programación Web III)
+
+| Dato | Valor |
+|---|---|
+| Versión de .NET | .NET 10 |
+| Repositorio | https://github.com/helendrg14-em/Fixa_API |
+
+| Integrante | Usuario de GitHub |
+|---|---|
+| Helen Darlin Rios Gutierrez | helendrg14-em |
+| Kevin Fernando Illanes Rios | *(completar)* |
+
+**1. Conexión a SQL Server local.** Ya viene en `appsettings.Development.json`, con
+autenticación de Windows y sin contraseña:
+
+```
+Server=localhost;Database=FixaSqlServer;Trusted_Connection=True;TrustServerCertificate=True
+```
+
+Si no hay SQL Server en `localhost`, la API lo busca sola en `.\SQLEXPRESS` y en
+`(localdb)\MSSQLLocalDB`. Con usuario y contraseña, el ejemplo es (sin credenciales reales):
+
+```
+Server=localhost,1433;Database=FixaSqlServer;User Id=usuario;Password=contraseña;TrustServerCertificate=True
+```
+
+**2. Aplicar las migraciones.** Se aplican solas al ejecutar la API. Para aplicarlas a mano:
+
+```bash
+cd Fixa.Api
+dotnet ef database update
+```
+
+**3. Datos de prueba.** Están en la migración, así que se cargan en el paso anterior: unidades,
+categorías, dos distritos, cuadrillas, metas de atención y un funcionario de cada perfil. La
+contraseña de prueba de todos es `Fixa-Demo-2026`:
+
+| Correo | Perfil |
+|---|---|
+| `admin@fixa.test` | Administrador |
+| `supervisor@fixa.test` | Supervisor de vialidad |
+| `tecnico@fixa.test` | Técnico de la cuadrilla vial |
+| `operador@fixa.test` | Operador (versión futura: no entra al panel) |
+
+**4. Abrir Swagger.**
+
+```bash
+cd Fixa.Api
+dotnet run
+```
+
+Abrir **http://localhost:5112/swagger**. Para los endpoints del panel, primero
+`POST /api/v1/panel/auth/login` y luego **Authorize** con el token.
+
+Sin credenciales de Cloudinary, los reportes se registran desde el panel con `motivoSinFoto`.
 
 ### Problemas comunes
 

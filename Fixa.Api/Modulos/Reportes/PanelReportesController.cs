@@ -3,6 +3,7 @@ using Fixa.Api.Dominio;
 using Fixa.Api.Infraestructura.Datos;
 using Fixa.Api.Infraestructura.Fotos;
 using Fixa.Api.Modulos.Auth;
+using Fixa.Api.Modulos.Casos;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -69,8 +70,12 @@ public class PanelReportesController(FixaDbContext db, IAlmacenFotos almacen) : 
             .RegistrarAsync(cancelacion);
 
         // El funcionario le dicta al vecino el código y la clave; la clave solo se entrega una vez.
-        return resultado.YaExistia
-            ? Ok(new { resultado.Codigo, mensaje = "Este reporte ya estaba registrado." })
-            : StatusCode(StatusCodes.Status201Created, new { resultado.Codigo, resultado.Clave, mensaje = "Entrega al vecino el código y la clave." });
+        if (resultado.YaExistia)
+            return Ok(new { resultado.Codigo, mensaje = "Este reporte ya estaba registrado." });
+
+        // Location apunta al caso que abrió (o al que se sumó) el reporte.
+        var casoId = await db.Reportes.Where(r => r.Codigo == resultado.Codigo).Select(r => r.CasoId).FirstAsync(cancelacion);
+        return CreatedAtAction(nameof(CasosController.Detalle), "Casos", new { id = casoId },
+            new { resultado.Codigo, resultado.Clave, casoId, mensaje = "Entrega al vecino el código y la clave." });
     }
 }

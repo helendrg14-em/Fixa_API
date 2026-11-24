@@ -47,7 +47,11 @@ migraciones de Entity Framework Core de esta API (ver "Ejecutar con SQL Server")
 | POST | `/api/v1/panel/casos/{id}/vinculacion` (marcar duplicado de un caso principal) | Supervisor (su unidad) y administrador (todas) |
 | GET | `/api/v1/panel/casos/revisiones` y POST `/api/v1/panel/casos/revisiones/{id}` | Supervisor (su unidad) y administrador (todas) |
 | GET | `/api/v1/panel/indicadores` y `/api/v1/panel/mapa` (`?desde=&hasta=&distritoId=&categoria=`) | Supervisor (su unidad) y administrador (todas) |
-| POST | `/api/v1/panel/reportes` (multipart; registro por teléfono o en ventanilla, `canal` telefono o presencial, foto o `motivoSinFoto`) | Administrador |
+| POST | `/api/v1/panel/reportes` (multipart; registro por teléfono o en ventanilla, `canal` telefono o presencial, foto o `motivoSinFoto`; responde 201 con `Location` del caso) | Administrador |
+| GET | `/api/v1/panel/cuadrillas`, `/api/v1/panel/cuadrillas/{id}` y `/api/v1/panel/cuadrillas/{id}/tecnicos` | Supervisor (su unidad) y administrador (todas) |
+| POST | `/api/v1/panel/cuadrillas` (201 con `Location`; el administrador indica `unidadId`) | Supervisor (su unidad) y administrador (todas) |
+| PUT | `/api/v1/panel/cuadrillas/{id}` (nombre y turno: `Mañana` o `Tarde`) | Supervisor (su unidad) y administrador (todas) |
+| DELETE | `/api/v1/panel/cuadrillas/{id}` (solo sin técnicos ni programaciones) | Supervisor (su unidad) y administrador (todas) |
 | GET | `/api/v1/panel/ordenes` | Técnico (casos programados para su cuadrilla) |
 | POST | `/api/v1/panel/ordenes/{casoId}/inicio` | Técnico |
 | POST | `/api/v1/panel/ordenes/{casoId}/intervenciones` (multipart, con evidencia) | Técnico, máx. 10 por IP cada 10 min |

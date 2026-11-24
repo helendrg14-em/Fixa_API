@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.RateLimiting;
 
 namespace Fixa.Api.Modulos.Indicadores;
 
-/// <summary>Mapa anónimo para la web informativa: sin códigos, descripciones ni fotos (RN-07).</summary>
+/// <summary>Mapa anónimo para la app y la web: sin códigos ni descripciones, con la foto del problema (RN-07).</summary>
 [ApiController]
 [AllowAnonymous]
 [Route("api/v1/publico/mapa")]

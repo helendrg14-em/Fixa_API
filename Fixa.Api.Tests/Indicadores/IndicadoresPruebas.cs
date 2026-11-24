@@ -72,13 +72,16 @@ public sealed class IndicadoresPruebas(EntornoPruebas entorno) : PruebaApi(entor
     }
 
     [Fact]
-    public async Task Mapa_publico_es_anonimo_y_con_ubicacion_aproximada()
+    public async Task Mapa_publico_es_anonimo_con_ubicacion_aproximada_y_la_foto()
     {
         var reporte = await RegistrarReporteAsync();
 
         using var json = JsonDocument.Parse(await Anonimo().GetStringAsync("/api/v1/publico/mapa"));
         var texto = json.RootElement.GetRawText();
         var punto = json.RootElement.GetProperty("features")[0].GetProperty("geometry").GetProperty("coordinates");
+        var foto = json.RootElement.GetProperty("features")[0].GetProperty("properties").GetProperty("foto").GetString();
+
+        Assert.False(string.IsNullOrWhiteSpace(foto));
 
         Assert.DoesNotContain("casoId", texto);
         Assert.DoesNotContain(reporte.Codigo, texto);

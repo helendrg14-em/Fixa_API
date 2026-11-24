@@ -68,8 +68,8 @@ public partial class FixaDbContext
             new Distrito { Id = 2, Numero = 2, Nombre = "Distrito 2 (prueba)", Limite = Rectangulo(-63.16, -17.80, -63.12, -17.76) });
 
         modelBuilder.Entity<Cuadrilla>().HasData(
-            new Cuadrilla { Id = 1, UnidadId = 1, Nombre = "Cuadrilla Vial A", Turno = "manana" },
-            new Cuadrilla { Id = 2, UnidadId = 2, Nombre = "Cuadrilla Alumbrado A", Turno = "tarde" });
+            new Cuadrilla { Id = 1, UnidadId = 1, Nombre = "Cuadrilla Vial A", Turno = "Mañana" },
+            new Cuadrilla { Id = 2, UnidadId = 2, Nombre = "Cuadrilla Alumbrado A", Turno = "Tarde" });
 
         modelBuilder.Entity<EntidadExterna>().HasData(
             new EntidadExterna { Id = 1, Nombre = "CRE (distribución eléctrica)", Contacto = "Línea de reclamos" });

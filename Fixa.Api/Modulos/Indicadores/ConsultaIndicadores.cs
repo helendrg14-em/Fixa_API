@@ -57,8 +57,9 @@ public sealed class ConsultaIndicadores(FixaDbContext db)
     }
 
     /// <summary>
-    /// Puntos en formato GeoJSON para Leaflet. La versión pública no lleva ids ni prioridad y
-    /// redondea la ubicación a unos 100 m, para que el reporte sea anónimo (RN-07).
+    /// Puntos en formato GeoJSON para Leaflet. La versión pública no lleva ids, códigos ni prioridad
+    /// y redondea la ubicación a unos 100 m, para que el reporte sea anónimo (RN-07). Sí lleva la
+    /// primera foto del reporte, para que el vecino reconozca el problema en el mapa.
     /// </summary>
     public async Task<object> MapaAsync(FiltroIndicadores filtro, long? unidadId, bool publico, CancellationToken cancelacion)
     {
@@ -71,6 +72,7 @@ public sealed class ConsultaIndicadores(FixaDbContext db)
             {
                 c.Id, categoria = c.Categoria.Codigo, c.Estado, c.Prioridad, c.Vencido, c.FechaCreacion,
                 latitud = r.Ubicacion.Y, longitud = r.Ubicacion.X,
+                foto = r.FotosReporte.OrderBy(f => f.Id).Select(f => f.Url).FirstOrDefault(),
             }))
             .OrderByDescending(p => p.FechaCreacion)
             .Take(PuntosMaximos)
@@ -90,7 +92,7 @@ public sealed class ConsultaIndicadores(FixaDbContext db)
                         : new[] { p.longitud, p.latitud },
                 },
                 properties = publico
-                    ? (object)new { p.categoria, estado = ValoresBd.DesdeBd<EstadoCaso>(p.Estado).Texto() }
+                    ? (object)new { p.categoria, estado = ValoresBd.DesdeBd<EstadoCaso>(p.Estado).Texto(), p.foto }
                     : new { casoId = p.Id, p.categoria, p.Estado, p.Prioridad, p.Vencido },
             }),
         };

@@ -228,14 +228,14 @@ namespace Fixa.Api.Infraestructura.Datos.MigracionesSqlServer
                         {
                             Id = 1L,
                             Nombre = "Cuadrilla Vial A",
-                            Turno = "manana",
+                            Turno = "Mañana",
                             UnidadId = 1L
                         },
                         new
                         {
                             Id = 2L,
                             Nombre = "Cuadrilla Alumbrado A",
-                            Turno = "tarde",
+                            Turno = "Tarde",
                             UnidadId = 2L
                         });
                 });

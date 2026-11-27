@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations;
+using Fixa.Api.Dtos;
 using Fixa.Api.Dominio;
 using Fixa.Api.Infraestructura.Datos;
 using Fixa.Api.Infraestructura.Seguridad;
@@ -9,18 +9,6 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 
 namespace Fixa.Api.Modulos.Reportes;
-
-public record FiltroCercanos(
-    [Required, StringLength(20)] string Categoria,
-    [Required, Range(-90, 90)] double? Latitud,
-    [Required, Range(-180, 180)] double? Longitud);
-
-public record SolicitudApoyo(
-    [Required, Range(-90, 90)] double? Latitud,
-    [Required, Range(-180, 180)] double? Longitud,
-    [Required, StringLength(64, MinimumLength = 8)] string ClaveIdempotencia,
-    [EmailAddress, StringLength(120)] string? CorreoContacto,
-    [StringLength(255)] string? TokenDispositivo);
 
 /// <summary>Fila de la consulta de cercanos (los alias de la SQL coinciden con estas propiedades).</summary>
 public sealed record CasoCercanoFila(long CasoId, string Estado, DateTime FechaCreacion, string TipoIncidencia, double DistanciaMetros, int Reportes);
@@ -39,7 +27,7 @@ public class CasosPublicoController(FixaDbContext db) : ControllerBase
     // GET /api/v1/publico/casos/cercanos?categoria=bache&latitud=-17.78&longitud=-63.18
     [HttpGet("cercanos")]
     [EnableRateLimiting(Limites.Consulta)]
-    public async Task<IActionResult> Cercanos([FromQuery] FiltroCercanos filtro, CancellationToken cancelacion)
+    public async Task<ActionResult<List<CasoCercanoPublico>>> Cercanos([FromQuery] FiltroCercanos filtro, CancellationToken cancelacion)
     {
         if (!ValoresBd.TryDesdeBd<CodigoCategoria>(filtro.Categoria, out var categoria))
             throw new ReglaNegocioException("La categoría no existe.");
@@ -74,16 +62,13 @@ public class CasosPublicoController(FixaDbContext db) : ControllerBase
             """).ToListAsync(cancelacion);
 
         var tiposDeLaCategoria = CreadorCategoria.Para(categoria).Tipos();
-        var cercanos = filas.Select(fila => new
-        {
-            casoId = fila.CasoId,
-            estado = ValoresBd.DesdeBd<EstadoCaso>(fila.Estado).Texto(),
-            tipo = tiposDeLaCategoria.GetValueOrDefault(fila.TipoIncidencia, fila.TipoIncidencia),
-            distanciaMetros = (int)Math.Round(fila.DistanciaMetros),
-            vecinosQueReportaron = fila.Reportes,
-            desde = DateOnly.FromDateTime(fila.FechaCreacion),
-        });
-        return Ok(cercanos);
+        return filas.Select(fila => new CasoCercanoPublico(
+            fila.CasoId,
+            ValoresBd.DesdeBd<EstadoCaso>(fila.Estado).Texto(),
+            tiposDeLaCategoria.GetValueOrDefault(fila.TipoIncidencia, fila.TipoIncidencia),
+            (int)Math.Round(fila.DistanciaMetros),
+            fila.Reportes,
+            DateOnly.FromDateTime(fila.FechaCreacion))).ToList();
     }
 
     // POST /api/v1/publico/casos/5/apoyos  (botón «Apoyar reporte»; no pide foto)
@@ -101,7 +86,7 @@ public class CasosPublicoController(FixaDbContext db) : ControllerBase
 
         // La clave solo se entrega una vez; si la solicitud se reenvió, no se vuelve a mostrar.
         return resultado.YaExistia
-            ? Ok(new { resultado.Codigo, mensaje = "Este apoyo ya estaba registrado." })
-            : StatusCode(StatusCodes.Status201Created, new { resultado.Codigo, resultado.Clave, mensaje = "Gracias por apoyar. Guarda tu código y tu clave para seguir el caso." });
+            ? Ok(new ReporteRegistradoSalida(resultado.Codigo, null, null, "Este apoyo ya estaba registrado."))
+            : StatusCode(StatusCodes.Status201Created, new ReporteRegistradoSalida(resultado.Codigo, resultado.Clave, null, "Gracias por apoyar. Guarda tu código y tu clave para seguir el caso."));
     }
 }

@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations;
+using Fixa.Api.Dtos;
 using System.Security.Claims;
 using Fixa.Api.Dominio;
 using Fixa.Api.Infraestructura.Datos;
@@ -10,10 +10,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Fixa.Api.Modulos.Auth;
 
-public record SolicitudLogin(
-    [Required, EmailAddress, StringLength(120)] string Correo,
-    [Required, StringLength(128)] string Password);
-
 /// <summary>Login de funcionarios (R01). Usa el Singleton ServicioAutenticacion.</summary>
 [ApiController]
 [Route("api/v1/panel/auth")]
@@ -23,6 +19,8 @@ public class AuthController(FixaDbContext db) : ControllerBase
     [AllowAnonymous]
     [EnableRateLimiting(Limites.Login)]
     [HttpPost("login")]
+    [ProducesResponseType<RespuestaLogin>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> Login(SolicitudLogin solicitud)
     {
         var auth = ServicioAutenticacion.Instancia;
@@ -37,15 +35,13 @@ public class AuthController(FixaDbContext db) : ControllerBase
         await db.SaveChangesAsync();
 
         var (token, expira) = auth.CrearToken(usuario);
-        return Ok(new { token, expira, tipo = usuario.Tipo, nombre = $"{usuario.Nombres} {usuario.Apellidos}" });
+        return Ok(new RespuestaLogin(token, expira, usuario.Rol, $"{usuario.Nombres} {usuario.Apellidos}"));
     }
 
     // GET /api/v1/panel/auth/yo
     [HttpGet("yo")]
-    public IActionResult Yo() => Ok(new
-    {
-        id = ServicioAutenticacion.Instancia.IdUsuario(User),
-        nombre = User.Identity?.Name,
-        tipo = User.FindFirstValue(ClaimTypes.Role),
-    });
+    public ActionResult<UsuarioActual> Yo() => new UsuarioActual(
+        ServicioAutenticacion.Instancia.IdUsuario(User),
+        User.Identity?.Name,
+        User.FindFirstValue(ClaimTypes.Role));
 }

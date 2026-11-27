@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations;
+using Fixa.Api.Dtos;
 using Fixa.Api.Dominio;
 using Fixa.Api.Infraestructura.Datos;
 using Fixa.Api.Infraestructura.Fotos;
@@ -9,30 +9,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace Fixa.Api.Modulos.Reportes;
-
-/// <summary>Reporte que registra el administrador desde el panel (multipart/form-data).</summary>
-public class SolicitudReporteAsistido
-{
-    [Required, StringLength(20)] public string Categoria { get; set; } = "";
-    [Required] public double? Latitud { get; set; }
-    [Required] public double? Longitud { get; set; }
-    [Required, StringLength(40)] public string TipoIncidencia { get; set; } = "";
-    [Required, StringLength(1000)] public string Descripcion { get; set; } = "";
-    [Range(1, 200)] public int? NumeroLuminarias { get; set; }
-    [StringLength(30)] public string? CodigoAvisoCobranza { get; set; }
-    [StringLength(200)] public string? Direccion { get; set; }
-    [StringLength(200)] public string? Referencia { get; set; }
-    [EmailAddress, StringLength(120)] public string? CorreoContacto { get; set; }
-
-    /// <summary>Por dónde llegó el reclamo: telefono o presencial.</summary>
-    [Required, StringLength(25)] public string Canal { get; set; } = "";
-
-    /// <summary>Obligatorio cuando no se adjunta foto (RN-02).</summary>
-    [StringLength(200)] public string? MotivoSinFoto { get; set; }
-
-    [Required, StringLength(64, MinimumLength = 8)] public string ClaveIdempotencia { get; set; } = "";
-    public List<IFormFile> Fotos { get; set; } = [];
-}
 
 /// <summary>
 /// Registro asistido (R07) desde el panel: el administrador carga el reclamo de un vecino que
@@ -71,11 +47,11 @@ public class PanelReportesController(FixaDbContext db, IAlmacenFotos almacen) : 
 
         // El funcionario le dicta al vecino el código y la clave; la clave solo se entrega una vez.
         if (resultado.YaExistia)
-            return Ok(new { resultado.Codigo, mensaje = "Este reporte ya estaba registrado." });
+            return Ok(new ReporteRegistradoSalida(resultado.Codigo, null, null, "Este reporte ya estaba registrado."));
 
         // Location apunta al caso que abrió (o al que se sumó) el reporte.
         var casoId = await db.Reportes.Where(r => r.Codigo == resultado.Codigo).Select(r => r.CasoId).FirstAsync(cancelacion);
         return CreatedAtAction(nameof(CasosController.Detalle), "Casos", new { id = casoId },
-            new { resultado.Codigo, resultado.Clave, casoId, mensaje = "Entrega al vecino el código y la clave." });
+            new ReporteRegistradoSalida(resultado.Codigo, resultado.Clave, casoId, "Entrega al vecino el código y la clave."));
     }
 }

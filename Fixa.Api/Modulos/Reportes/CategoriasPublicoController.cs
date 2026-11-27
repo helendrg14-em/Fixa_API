@@ -1,4 +1,5 @@
 using Fixa.Api.Dominio;
+using Fixa.Api.Dtos;
 using Fixa.Api.Infraestructura.Datos;
 using Fixa.Api.Modulos.Reportes.Categorias;
 using Microsoft.AspNetCore.Authorization;
@@ -19,27 +20,22 @@ public class CategoriasPublicoController(FixaDbContext db) : ControllerBase
 {
     // GET /api/v1/publico/categorias
     [HttpGet]
-    public async Task<IActionResult> Listar()
-    {
-        var categorias = await db.Categorias.AsNoTracking()
+    public async Task<ActionResult<List<CategoriaSalida>>> Listar() =>
+        await db.Categorias.AsNoTracking()
             .Where(c => c.Activa)
             .OrderBy(c => c.Id)
-            .Select(c => new { c.Codigo, c.Nombre, c.Descripcion })
+            .Select(c => new CategoriaSalida(c.Codigo, c.Nombre, c.Descripcion))
             .ToListAsync();
-
-        return Ok(categorias);
-    }
 
     // GET /api/v1/publico/categorias/alumbrado/tipos
     [HttpGet("{codigo}/tipos")]
-    public IActionResult Tipos(string codigo)
+    public ActionResult<List<TipoIncidenciaSalida>> Tipos(string codigo)
     {
         if (!ValoresBd.TryDesdeBd<CodigoCategoria>(codigo, out var categoria))
             throw new NoEncontradoException("La categoría no existe.");
 
-        var tipos = CreadorCategoria.Para(categoria).Tipos()
-            .Select(t => new { valor = t.Key, texto = t.Value });
-
-        return Ok(tipos);
+        return CreadorCategoria.Para(categoria).Tipos()
+            .Select(t => new TipoIncidenciaSalida(t.Key, t.Value))
+            .ToList();
     }
 }

@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations;
+using Fixa.Api.Dtos;
 using Fixa.Api.Dominio;
 using Fixa.Api.Dominio.Entidades;
 using Fixa.Api.Infraestructura.Datos;
@@ -8,16 +8,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace Fixa.Api.Modulos.Cuadrillas;
-
-/// <summary>Datos para crear o editar una cuadrilla. La unidad solo la elige el administrador.</summary>
-public sealed record CuadrillaEntrada(
-    [Required(ErrorMessage = "El nombre es obligatorio."), StringLength(60, MinimumLength = 3, ErrorMessage = "El nombre debe tener entre 3 y 60 caracteres.")] string Nombre,
-    [Required(ErrorMessage = "El turno es obligatorio."), StringLength(10)] string Turno,
-    [Range(1, long.MaxValue, ErrorMessage = "La unidad no es válida.")] long? UnidadId);
-
-public sealed record CuadrillaSalida(long Id, string Nombre, string Turno, long UnidadId, string Unidad, int Tecnicos);
-
-public sealed record TecnicoSalida(long Id, string Nombres, string Apellidos, string Correo, string? Especialidad, bool Activo);
 
 /// <summary>
 /// Cuadrillas de cada unidad responsable (RF-07: a ellas se programan los casos). El supervisor
@@ -67,7 +57,7 @@ public sealed class CuadrillasController(FixaDbContext db) : ControllerBase
 
         var tecnico = TipoUsuario.Tecnico.ABd();
         return await db.Usuarios.AsNoTracking()
-            .Where(u => u.CuadrillaId == id && u.Tipo == tecnico)
+            .Where(u => u.CuadrillaId == id && u.Rol == tecnico)
             .OrderBy(u => u.Apellidos)
             .Select(u => new TecnicoSalida(u.Id, u.Nombres, u.Apellidos, u.Correo, u.Especialidad, u.Activo))
             .ToListAsync(cancelacion);
@@ -139,7 +129,7 @@ public sealed class CuadrillasController(FixaDbContext db) : ControllerBase
 
     private static readonly System.Linq.Expressions.Expression<Func<Cuadrilla, CuadrillaSalida>> Salida = c =>
         new CuadrillaSalida(c.Id, c.Nombre, c.Turno, c.UnidadId, c.Unidad.Nombre,
-            c.Usuarios.Count(u => u.Tipo == TipoTecnico));
+            c.Usuarios.Count(u => u.Rol == TipoTecnico));
 
     /// <summary>Las cuadrillas que puede ver y editar quien hace la petición.</summary>
     private async Task<IQueryable<Cuadrilla>> VisiblesAsync(CancellationToken cancelacion)

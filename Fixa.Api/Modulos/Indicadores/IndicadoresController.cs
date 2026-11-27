@@ -1,4 +1,5 @@
 using Fixa.Api.Dominio;
+using Fixa.Api.Dtos;
 using Fixa.Api.Infraestructura.Datos;
 using Fixa.Api.Modulos.Auth;
 using Fixa.Api.Modulos.Casos;
@@ -18,16 +19,16 @@ public class IndicadoresController(FixaDbContext db, ConsultaIndicadores consult
 {
     // GET /api/v1/panel/indicadores?desde=2026-10-01&hasta=2026-10-31&distritoId=1&categoria=bache
     [HttpGet("indicadores")]
-    public async Task<IActionResult> Indicadores([FromQuery] FiltroIndicadores filtro, CancellationToken cancelacion)
+    public async Task<ActionResult<IndicadoresSalida>> Indicadores([FromQuery] FiltroIndicadores filtro, CancellationToken cancelacion)
     {
         await vencimientos.MarcarAsync(cancelacion);
-        return Ok(await consulta.ResumenAsync(filtro, await AlcanceAsync(cancelacion), cancelacion));
+        return await consulta.ResumenAsync(filtro, await AlcanceAsync(cancelacion), cancelacion);
     }
 
     // GET /api/v1/panel/mapa?categoria=alumbrado  (GeoJSON para Leaflet)
     [HttpGet("mapa")]
-    public async Task<IActionResult> Mapa([FromQuery] FiltroIndicadores filtro, CancellationToken cancelacion) =>
-        Ok(await consulta.MapaAsync(filtro, await AlcanceAsync(cancelacion), publico: false, cancelacion));
+    public async Task<ActionResult<MapaSalida>> Mapa([FromQuery] FiltroIndicadores filtro, CancellationToken cancelacion) =>
+        await consulta.MapaAsync(filtro, await AlcanceAsync(cancelacion), publico: false, cancelacion);
 
     /// <summary>null = todas las unidades (administrador). Un supervisor sin unidad no ve nada.</summary>
     private async Task<long?> AlcanceAsync(CancellationToken cancelacion)

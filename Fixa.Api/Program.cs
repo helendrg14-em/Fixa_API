@@ -1,3 +1,4 @@
+using Fixa.Api.Dtos;
 using Fixa.Api.Infraestructura;
 using Fixa.Api.Infraestructura.Datos;
 using Fixa.Api.Infraestructura.Seguridad;
@@ -14,11 +15,11 @@ var builder = WebApplication.CreateBuilder(args);
 // Ninguna petición puede superar 10 MB (el registro admite hasta 3 fotos de 3 MB).
 builder.WebHost.ConfigureKestrel(kestrel => kestrel.Limits.MaxRequestBodySize = 10 * 1024 * 1024);
 
-// PostgreSQL por defecto (producción); SQL Server con BaseDatos:Proveedor = "SqlServer".
-var usaSqlServer = ConfiguracionBaseDatos.UsaSqlServer(builder.Configuration);
-var conexionSqlServer = usaSqlServer ? ConfiguracionBaseDatos.ConexionSqlServer(builder.Configuration) : null;
-builder.Services.AddDbContextPool<FixaDbContext>(opciones =>
-    ConfiguracionBaseDatos.Configurar(opciones, builder.Configuration, conexionSqlServer));
+// Las fechas se guardan en hora local de Bolivia (convención de Laravel): ZonaHorariaBolivia
+// fija la zona de cada sesión, aunque el servidor de PostgreSQL esté en UTC (Docker, Supabase).
+builder.Services.AddDbContextPool<FixaDbContext>(opciones => opciones
+    .UseNpgsql(builder.Configuration.GetConnectionString("Fixa"), npgsql => npgsql.UseNetTopologySuite())
+    .AddInterceptors(new ZonaHorariaBolivia()));
 
 // Singleton: se configura una sola vez al arrancar, con la clave de User Secrets o de Render.
 ServicioAutenticacion.Instancia.Configurar(builder.Configuration["Jwt:Clave"]);
@@ -66,13 +67,9 @@ builder.Services.AddOpenApi(openApi => openApi.AddDocumentTransformer<TokenEnOpe
 
 var app = builder.Build();
 
-// En SQL Server la API crea la base, sus tablas y los datos de prueba al iniciar. En PostgreSQL
-// no: ahí el esquema es de las migraciones de Laravel.
-if (usaSqlServer)
-{
-    using var alcance = app.Services.CreateScope();
+// Aplica las migraciones de EF Core de las tablas propias de la API. Las demás tablas las crea Laravel.
+using (var alcance = app.Services.CreateScope())
     alcance.ServiceProvider.GetRequiredService<FixaDbContext>().Database.Migrate();
-}
 
 // Primero: la IP real del vecino y el esquema https, antes de cualquier límite o redirección.
 app.UseProxyDeConfianza();
@@ -105,7 +102,7 @@ app.UseAuthorization();
 
 // Render la consulta para saber si la API está viva; el panel y la app, para despertarla.
 app.MapGet("/salud", async (FixaDbContext db, CancellationToken cancelacion) =>
-    await db.Database.CanConnectAsync(cancelacion) ? Results.Ok(new { estado = "ok" }) : Results.StatusCode(StatusCodes.Status503ServiceUnavailable))
+    await db.Database.CanConnectAsync(cancelacion) ? Results.Ok(new EstadoSalud("ok")) : Results.StatusCode(StatusCodes.Status503ServiceUnavailable))
     .AllowAnonymous().ExcludeFromDescription();
 
 app.MapControllers();

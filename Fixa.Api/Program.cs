@@ -77,22 +77,20 @@ app.UseExceptionHandler();
 app.UseStatusCodePages();
 app.UseCabecerasSeguridad();
 
+// Documentación de la API en todos los entornos: la dirección raíz abre Swagger UI. Los
+// endpoints siguen protegidos; para probar los del panel se usa Authorize con el token.
+app.MapOpenApi().AllowAnonymous();
+app.UseSwaggerUI(swagger =>
+{
+    swagger.SwaggerEndpoint("/openapi/v1.json", "FIXA API v1");
+    swagger.DocumentTitle = "FIXA API";
+});
+app.MapGet("/", () => Results.Redirect("/swagger")).ExcludeFromDescription().AllowAnonymous();
+
 if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi().AllowAnonymous();
     app.MapScalarApiReference().AllowAnonymous();
-    // Swagger UI sobre el mismo documento OpenAPI.
-    app.UseSwaggerUI(swagger =>
-    {
-        swagger.SwaggerEndpoint("/openapi/v1.json", "FIXA API v1");
-        swagger.DocumentTitle = "FIXA API";
-    });
-    app.MapGet("/", () => Results.Redirect("/scalar")).ExcludeFromDescription().AllowAnonymous();
-}
 else
-{
     app.UseHsts();
-}
 
 app.UseHttpsRedirection();
 app.UseCors();

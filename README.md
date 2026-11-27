@@ -154,7 +154,8 @@ dotnet run
 ```
 
 - Comprobar que funciona: http://localhost:5112/salud debe responder `{"estado":"ok"}`.
-- Probar los endpoints: http://localhost:5112/swagger o http://localhost:5112/scalar (solo en desarrollo).
+- Probar los endpoints: http://localhost:5112 abre Swagger UI (también en Render: https://fixa-api-nhua.onrender.com). Scalar está en /scalar solo en desarrollo.
+- Para los endpoints del panel: `POST /api/v1/panel/auth/login`, copiar el token y pegarlo en **Authorize**.
 
 **Para conectar el panel**, copia la misma `Jwt:Clave` en el `.env` de Laravel como
 `FIXA_API_JWT_CLAVE` y pon `FIXA_API_URL=http://localhost:5112`.

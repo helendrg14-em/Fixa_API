@@ -692,9 +692,9 @@ public partial class FixaDbContext : DbContext
                 .HasMaxLength(80)
                 .HasColumnName("punto_atencion");
             entity.Property(e => e.Requiere2fa).HasColumnName("requiere_2fa");
-            entity.Property(e => e.Tipo)
+            entity.Property(e => e.Rol)
                 .HasMaxLength(20)
-                .HasColumnName("tipo");
+                .HasColumnName("rol");
             entity.Property(e => e.TokenExpira)
                 .HasColumnType("timestamp(0) without time zone")
                 .HasColumnName("token_expira");

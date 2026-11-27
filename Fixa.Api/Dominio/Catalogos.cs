@@ -24,7 +24,7 @@ public enum CanalNotificacion { Push, Correo }
 
 public enum EstadoEntrega { Pendiente, Enviada, NoEntregada }
 
-/// <summary>Roles tal como viajan en el token JWT (mismo texto que la columna usuarios.tipo).</summary>
+/// <summary>Roles tal como viajan en el token JWT (mismo texto que la columna usuarios.rol).</summary>
 public static class Roles
 {
     public const string Administrador = "administrador";

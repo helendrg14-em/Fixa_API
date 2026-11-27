@@ -7,7 +7,7 @@ public partial class Usuario
 {
     public long Id { get; set; }
 
-    public string Tipo { get; set; } = null!;
+    public string Rol { get; set; } = null!;
 
     public string Nombres { get; set; } = null!;
 

@@ -362,7 +362,7 @@ public sealed class GestorCasos(
     /// </summary>
     private Permiso DeSuUnidad(long usuarioId) => (casoId, cancelacion) =>
         db.Casos.AnyAsync(c => c.Id == casoId && db.Usuarios.Any(u => u.Id == usuarioId && u.Activo
-            && (u.Tipo == Roles.Administrador || (u.UnidadId != null && u.UnidadId == c.UnidadId))), cancelacion);
+            && (u.Rol == Roles.Administrador || (u.UnidadId != null && u.UnidadId == c.UnidadId))), cancelacion);
 
     /// <summary>El técnico solo trabaja casos programados para su cuadrilla.</summary>
     private Permiso DeSuCuadrilla(long tecnicoId) => (casoId, cancelacion) =>

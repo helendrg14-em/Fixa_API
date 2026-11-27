@@ -54,8 +54,8 @@ public sealed class ServicioAutenticacion
     public bool PuedeEntrar(Usuario usuario) =>
         usuario.Activo
         && !usuario.DebeRegistrarPassword
-        && ValoresBd.TryDesdeBd<TipoUsuario>(usuario.Tipo, out var tipo)
-        && tipo != TipoUsuario.Operador;
+        && ValoresBd.TryDesdeBd<TipoUsuario>(usuario.Rol, out var rol)
+        && rol != TipoUsuario.Operador;
 
     /// <summary>Crea el token JWT que el panel envía en cada petición.</summary>
     public (string Token, DateTime Expira) CrearToken(Usuario usuario)
@@ -65,7 +65,7 @@ public sealed class ServicioAutenticacion
         {
             new Claim(JwtRegisteredClaimNames.Sub, usuario.Id.ToString()),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-            new Claim(ClaimTypes.Role, usuario.Tipo),
+            new Claim(ClaimTypes.Role, usuario.Rol),
             new Claim(ClaimTypes.Name, $"{usuario.Nombres} {usuario.Apellidos}"),
         };
         var token = new JwtSecurityToken(

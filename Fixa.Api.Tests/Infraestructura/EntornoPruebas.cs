@@ -83,13 +83,13 @@ public sealed class EntornoPruebas : IAsyncLifetime
     }
 
     /// <summary>Crea un funcionario de prueba y devuelve su id.</summary>
-    public async Task<long> CrearUsuarioAsync(string correo, string tipo, long? unidad, long? cuadrilla, bool activo = true) =>
+    public async Task<long> CrearUsuarioAsync(string correo, string rol, long? unidad, long? cuadrilla, bool activo = true) =>
         await EscalarAsync<long>(
             """
-            INSERT INTO usuarios (tipo, nombres, apellidos, correo, password_hash, activo, debe_registrar_password, unidad_id, cuadrilla_id)
+            INSERT INTO usuarios (rol, nombres, apellidos, correo, password_hash, activo, debe_registrar_password, unidad_id, cuadrilla_id)
             VALUES ($1, 'Prueba', $2, $3, $4, $5, false, $6, $7) RETURNING id
             """,
-            tipo, tipo, correo, VerificadorClave.Hash(Password), activo, (object?)unidad ?? DBNull.Value, (object?)cuadrilla ?? DBNull.Value);
+            rol, rol, correo, VerificadorClave.Hash(Password), activo, (object?)unidad ?? DBNull.Value, (object?)cuadrilla ?? DBNull.Value);
 
     private async Task CrearUsuariosAsync()
     {

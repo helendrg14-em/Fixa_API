@@ -3,18 +3,18 @@ using System;
 using Fixa.Api.Infraestructura.Datos;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NetTopologySuite.Geometries;
+using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace Fixa.Api.Infraestructura.Datos.MigracionesSqlServer
+namespace Fixa.Api.Infraestructura.Datos.Migraciones
 {
     [DbContext(typeof(FixaDbContext))]
-    [Migration("20261120023653_CrearEsquemaFixa")]
-    partial class CrearEsquemaFixa
+    [Migration("20261127120450_PlantillasDeNotificacion")]
+    partial class PlantillasDeNotificacion
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -22,9 +22,13 @@ namespace Fixa.Api.Infraestructura.Datos.MigracionesSqlServer
 #pragma warning disable 612, 618
             modelBuilder
                 .HasAnnotation("ProductVersion", "10.0.14")
-                .HasAnnotation("Relational:MaxIdentifierLength", 128);
+                .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
-            SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+            NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "fuzzystrmatch");
+            NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "postgis");
+            NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "tiger", "postgis_tiger_geocoder");
+            NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "topology", "postgis_topology");
+            NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
             modelBuilder.Entity("Fixa.Api.Dominio.Entidades.Caso", b =>
                 {
@@ -33,7 +37,7 @@ namespace Fixa.Api.Infraestructura.Datos.MigracionesSqlServer
                         .HasColumnType("bigint")
                         .HasColumnName("id");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
                     b.Property<long>("CategoriaId")
                         .HasColumnType("bigint")
@@ -42,34 +46,34 @@ namespace Fixa.Api.Infraestructura.Datos.MigracionesSqlServer
                     b.Property<string>("Estado")
                         .IsRequired()
                         .HasMaxLength(25)
-                        .HasColumnType("nvarchar(25)")
+                        .HasColumnType("character varying(25)")
                         .HasColumnName("estado");
 
                     b.Property<DateTime?>("FechaCierre")
-                        .HasColumnType("datetime2(0)")
+                        .HasColumnType("timestamp(0) without time zone")
                         .HasColumnName("fecha_cierre");
 
                     b.Property<DateTime>("FechaCreacion")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2(0)")
+                        .HasColumnType("timestamp(0) without time zone")
                         .HasColumnName("fecha_creacion")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
                     b.Property<DateTime?>("FechaObjetivo")
-                        .HasColumnType("datetime2(0)")
+                        .HasColumnType("timestamp(0) without time zone")
                         .HasColumnName("fecha_objetivo");
 
                     b.Property<string>("JustificacionPrioridad")
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("text")
                         .HasColumnName("justificacion_prioridad");
 
                     b.Property<string>("Prioridad")
                         .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)")
+                        .HasColumnType("character varying(10)")
                         .HasColumnName("prioridad");
 
                     b.Property<bool>("RequiereVerificacionCampo")
-                        .HasColumnType("bit")
+                        .HasColumnType("boolean")
                         .HasColumnName("requiere_verificacion_campo");
 
                     b.Property<long?>("UnidadId")
@@ -77,7 +81,7 @@ namespace Fixa.Api.Infraestructura.Datos.MigracionesSqlServer
                         .HasColumnName("unidad_id");
 
                     b.Property<bool>("Vencido")
-                        .HasColumnType("bit")
+                        .HasColumnType("boolean")
                         .HasColumnName("vencido");
 
                     b.HasKey("Id")
@@ -99,33 +103,33 @@ namespace Fixa.Api.Infraestructura.Datos.MigracionesSqlServer
                         .HasColumnType("bigint")
                         .HasColumnName("id");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
                     b.Property<bool>("Activa")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
+                        .HasColumnType("boolean")
                         .HasDefaultValue(true)
                         .HasColumnName("activa");
 
                     b.Property<string>("Codigo")
                         .IsRequired()
                         .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)")
+                        .HasColumnType("character varying(20)")
                         .HasColumnName("codigo");
 
                     b.Property<string>("Descripcion")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("text")
                         .HasColumnName("descripcion");
 
                     b.Property<string>("Nombre")
                         .IsRequired()
                         .HasMaxLength(60)
-                        .HasColumnType("nvarchar(60)")
+                        .HasColumnType("character varying(60)")
                         .HasColumnName("nombre");
 
                     b.Property<int>("RadioCercaniaM")
-                        .HasColumnType("int")
+                        .HasColumnType("integer")
                         .HasColumnName("radio_cercania_m");
 
                     b.Property<long>("UnidadId")
@@ -144,48 +148,16 @@ namespace Fixa.Api.Infraestructura.Datos.MigracionesSqlServer
                     b.HasIndex(new[] { "UnidadId" }, "categorias_unidad_id_index");
 
                     b.ToTable("categorias", (string)null);
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1L,
-                            Activa = true,
-                            Codigo = "bache",
-                            Descripcion = "Baches, hundimientos y calzada dañada.",
-                            Nombre = "Baches y deterioro vial",
-                            RadioCercaniaM = 30,
-                            UnidadId = 1L
-                        },
-                        new
-                        {
-                            Id = 2L,
-                            Activa = true,
-                            Codigo = "alumbrado",
-                            Descripcion = "Luminarias apagadas, intermitentes o dañadas.",
-                            Nombre = "Fallas de alumbrado público",
-                            RadioCercaniaM = 30,
-                            UnidadId = 2L
-                        },
-                        new
-                        {
-                            Id = 3L,
-                            Activa = true,
-                            Codigo = "residuos",
-                            Descripcion = "Acumulación de basura en la vía pública.",
-                            Nombre = "Microbasurales / residuos",
-                            RadioCercaniaM = 30,
-                            UnidadId = 3L
-                        });
                 });
 
             modelBuilder.Entity("Fixa.Api.Dominio.Entidades.ContadorCodigo", b =>
                 {
                     b.Property<int>("Anio")
-                        .HasColumnType("int")
+                        .HasColumnType("integer")
                         .HasColumnName("anio");
 
                     b.Property<int>("Ultimo")
-                        .HasColumnType("int")
+                        .HasColumnType("integer")
                         .HasColumnName("ultimo");
 
                     b.HasKey("Anio")
@@ -201,18 +173,18 @@ namespace Fixa.Api.Infraestructura.Datos.MigracionesSqlServer
                         .HasColumnType("bigint")
                         .HasColumnName("id");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
                     b.Property<string>("Nombre")
                         .IsRequired()
                         .HasMaxLength(60)
-                        .HasColumnType("nvarchar(60)")
+                        .HasColumnType("character varying(60)")
                         .HasColumnName("nombre");
 
                     b.Property<string>("Turno")
                         .IsRequired()
                         .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)")
+                        .HasColumnType("character varying(10)")
                         .HasColumnName("turno");
 
                     b.Property<long>("UnidadId")
@@ -225,22 +197,6 @@ namespace Fixa.Api.Infraestructura.Datos.MigracionesSqlServer
                     b.HasIndex(new[] { "UnidadId" }, "cuadrillas_unidad_id_index");
 
                     b.ToTable("cuadrillas", (string)null);
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1L,
-                            Nombre = "Cuadrilla Vial A",
-                            Turno = "manana",
-                            UnidadId = 1L
-                        },
-                        new
-                        {
-                            Id = 2L,
-                            Nombre = "Cuadrilla Alumbrado A",
-                            Turno = "tarde",
-                            UnidadId = 2L
-                        });
                 });
 
             modelBuilder.Entity("Fixa.Api.Dominio.Entidades.Derivacion", b =>
@@ -250,7 +206,7 @@ namespace Fixa.Api.Infraestructura.Datos.MigracionesSqlServer
                         .HasColumnType("bigint")
                         .HasColumnName("id");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
                     b.Property<long>("CasoId")
                         .HasColumnType("bigint")
@@ -263,22 +219,22 @@ namespace Fixa.Api.Infraestructura.Datos.MigracionesSqlServer
                     b.Property<string>("EstadoSeguimiento")
                         .IsRequired()
                         .HasMaxLength(25)
-                        .HasColumnType("nvarchar(25)")
+                        .HasColumnType("character varying(25)")
                         .HasColumnName("estado_seguimiento");
 
                     b.Property<DateTime>("FechaDerivacion")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2(0)")
+                        .HasColumnType("timestamp(0) without time zone")
                         .HasColumnName("fecha_derivacion")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
                     b.Property<DateTime?>("FechaRespuesta")
-                        .HasColumnType("datetime2(0)")
+                        .HasColumnType("timestamp(0) without time zone")
                         .HasColumnName("fecha_respuesta");
 
                     b.Property<string>("Motivo")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("text")
                         .HasColumnName("motivo");
 
                     b.Property<long>("ResponsableId")
@@ -286,7 +242,7 @@ namespace Fixa.Api.Infraestructura.Datos.MigracionesSqlServer
                         .HasColumnName("responsable_id");
 
                     b.Property<string>("RespuestaEntidad")
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("text")
                         .HasColumnName("respuesta_entidad");
 
                     b.HasKey("Id")
@@ -308,46 +264,34 @@ namespace Fixa.Api.Infraestructura.Datos.MigracionesSqlServer
                         .HasColumnType("bigint")
                         .HasColumnName("id");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
                     b.Property<Polygon>("Limite")
                         .IsRequired()
-                        .HasColumnType("geography")
+                        .HasColumnType("geometry(Polygon,4326)")
                         .HasColumnName("limite");
 
                     b.Property<string>("Nombre")
                         .IsRequired()
                         .HasMaxLength(80)
-                        .HasColumnType("nvarchar(80)")
+                        .HasColumnType("character varying(80)")
                         .HasColumnName("nombre");
 
                     b.Property<int>("Numero")
-                        .HasColumnType("int")
+                        .HasColumnType("integer")
                         .HasColumnName("numero");
 
                     b.HasKey("Id")
                         .HasName("distritos_pkey");
 
+                    b.HasIndex(new[] { "Limite" }, "distritos_limite_spatialindex");
+
+                    NpgsqlIndexBuilderExtensions.HasMethod(b.HasIndex(new[] { "Limite" }, "distritos_limite_spatialindex"), "gist");
+
                     b.HasIndex(new[] { "Numero" }, "distritos_numero_unique")
                         .IsUnique();
 
                     b.ToTable("distritos", (string)null);
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1L,
-                            Limite = (NetTopologySuite.Geometries.Polygon)new NetTopologySuite.IO.WKTReader().Read("SRID=4326;POLYGON ((-63.2 -17.8, -63.16 -17.8, -63.16 -17.76, -63.2 -17.76, -63.2 -17.8))"),
-                            Nombre = "Distrito 1 (prueba)",
-                            Numero = 1
-                        },
-                        new
-                        {
-                            Id = 2L,
-                            Limite = (NetTopologySuite.Geometries.Polygon)new NetTopologySuite.IO.WKTReader().Read("SRID=4326;POLYGON ((-63.16 -17.8, -63.12 -17.8, -63.12 -17.76, -63.16 -17.76, -63.16 -17.8))"),
-                            Nombre = "Distrito 2 (prueba)",
-                            Numero = 2
-                        });
                 });
 
             modelBuilder.Entity("Fixa.Api.Dominio.Entidades.EntidadExterna", b =>
@@ -357,31 +301,23 @@ namespace Fixa.Api.Infraestructura.Datos.MigracionesSqlServer
                         .HasColumnType("bigint")
                         .HasColumnName("id");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
                     b.Property<string>("Contacto")
                         .HasMaxLength(120)
-                        .HasColumnType("nvarchar(120)")
+                        .HasColumnType("character varying(120)")
                         .HasColumnName("contacto");
 
                     b.Property<string>("Nombre")
                         .IsRequired()
                         .HasMaxLength(120)
-                        .HasColumnType("nvarchar(120)")
+                        .HasColumnType("character varying(120)")
                         .HasColumnName("nombre");
 
                     b.HasKey("Id")
                         .HasName("entidades_externas_pkey");
 
                     b.ToTable("entidades_externas", (string)null);
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1L,
-                            Contacto = "Línea de reclamos",
-                            Nombre = "CRE (distribución eléctrica)"
-                        });
                 });
 
             modelBuilder.Entity("Fixa.Api.Dominio.Entidades.EventoHistorial", b =>
@@ -391,7 +327,7 @@ namespace Fixa.Api.Infraestructura.Datos.MigracionesSqlServer
                         .HasColumnType("bigint")
                         .HasColumnName("id");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
                     b.Property<long>("CasoId")
                         .HasColumnType("bigint")
@@ -399,33 +335,33 @@ namespace Fixa.Api.Infraestructura.Datos.MigracionesSqlServer
 
                     b.Property<string>("Detalle")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("text")
                         .HasColumnName("detalle");
 
                     b.Property<string>("EstadoAnterior")
                         .HasMaxLength(25)
-                        .HasColumnType("nvarchar(25)")
+                        .HasColumnType("character varying(25)")
                         .HasColumnName("estado_anterior");
 
                     b.Property<string>("EstadoNuevo")
                         .HasMaxLength(25)
-                        .HasColumnType("nvarchar(25)")
+                        .HasColumnType("character varying(25)")
                         .HasColumnName("estado_nuevo");
 
                     b.Property<DateTime>("FechaHora")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2(0)")
+                        .HasColumnType("timestamp(0) without time zone")
                         .HasColumnName("fecha_hora")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
                     b.Property<string>("Motivo")
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("text")
                         .HasColumnName("motivo");
 
                     b.Property<string>("Tipo")
                         .IsRequired()
                         .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)")
+                        .HasColumnType("character varying(20)")
                         .HasColumnName("tipo");
 
                     b.Property<long?>("UsuarioId")
@@ -449,11 +385,11 @@ namespace Fixa.Api.Infraestructura.Datos.MigracionesSqlServer
                         .HasColumnType("bigint")
                         .HasColumnName("id");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
                     b.Property<string>("Descripcion")
                         .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)")
+                        .HasColumnType("character varying(200)")
                         .HasColumnName("descripcion");
 
                     b.Property<long>("IntervencionId")
@@ -463,13 +399,13 @@ namespace Fixa.Api.Infraestructura.Datos.MigracionesSqlServer
                     b.Property<string>("Tipo")
                         .IsRequired()
                         .HasMaxLength(15)
-                        .HasColumnType("nvarchar(15)")
+                        .HasColumnType("character varying(15)")
                         .HasColumnName("tipo");
 
                     b.Property<string>("Url")
                         .IsRequired()
                         .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)")
+                        .HasColumnType("character varying(500)")
                         .HasColumnName("url");
 
                     b.HasKey("Id")
@@ -487,7 +423,7 @@ namespace Fixa.Api.Infraestructura.Datos.MigracionesSqlServer
                         .HasColumnType("bigint")
                         .HasColumnName("id");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
                     b.Property<DateOnly>("Fecha")
                         .HasColumnType("date")
@@ -496,13 +432,13 @@ namespace Fixa.Api.Infraestructura.Datos.MigracionesSqlServer
                     b.Property<string>("Fuente")
                         .IsRequired()
                         .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)")
+                        .HasColumnType("character varying(200)")
                         .HasColumnName("fuente");
 
                     b.Property<string>("Nombre")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)")
+                        .HasColumnType("character varying(100)")
                         .HasColumnName("nombre");
 
                     b.HasKey("Id")
@@ -512,15 +448,6 @@ namespace Fixa.Api.Infraestructura.Datos.MigracionesSqlServer
                         .IsUnique();
 
                     b.ToTable("feriados", (string)null);
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1L,
-                            Fecha = new DateOnly(2026, 12, 25),
-                            Fuente = "Datos de prueba",
-                            Nombre = "Navidad"
-                        });
                 });
 
             modelBuilder.Entity("Fixa.Api.Dominio.Entidades.FotoReporte", b =>
@@ -530,18 +457,18 @@ namespace Fixa.Api.Infraestructura.Datos.MigracionesSqlServer
                         .HasColumnType("bigint")
                         .HasColumnName("id");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
                     b.Property<DateTime>("FechaCarga")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2(0)")
+                        .HasColumnType("timestamp(0) without time zone")
                         .HasColumnName("fecha_carga")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
                     b.Property<string>("PublicId")
                         .IsRequired()
                         .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)")
+                        .HasColumnType("character varying(200)")
                         .HasColumnName("public_id");
 
                     b.Property<long>("ReporteId")
@@ -551,7 +478,7 @@ namespace Fixa.Api.Infraestructura.Datos.MigracionesSqlServer
                     b.Property<string>("Url")
                         .IsRequired()
                         .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)")
+                        .HasColumnType("character varying(500)")
                         .HasColumnName("url");
 
                     b.HasKey("Id")
@@ -569,7 +496,7 @@ namespace Fixa.Api.Infraestructura.Datos.MigracionesSqlServer
                         .HasColumnType("bigint")
                         .HasColumnName("id");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
                     b.Property<long>("CasoId")
                         .HasColumnType("bigint")
@@ -578,17 +505,17 @@ namespace Fixa.Api.Infraestructura.Datos.MigracionesSqlServer
                     b.Property<string>("EstadoValidacion")
                         .IsRequired()
                         .HasMaxLength(15)
-                        .HasColumnType("nvarchar(15)")
+                        .HasColumnType("character varying(15)")
                         .HasColumnName("estado_validacion");
 
                     b.Property<DateTime>("Fecha")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2(0)")
+                        .HasColumnType("timestamp(0) without time zone")
                         .HasColumnName("fecha")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
                     b.Property<string>("ObservacionValidacion")
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("text")
                         .HasColumnName("observacion_validacion");
 
                     b.Property<long?>("SupervisorId")
@@ -601,7 +528,7 @@ namespace Fixa.Api.Infraestructura.Datos.MigracionesSqlServer
 
                     b.Property<string>("TrabajoRealizado")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("text")
                         .HasColumnName("trabajo_realizado");
 
                     b.HasKey("Id")
@@ -623,24 +550,24 @@ namespace Fixa.Api.Infraestructura.Datos.MigracionesSqlServer
                         .HasColumnType("bigint")
                         .HasColumnName("id");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
                     b.Property<long>("CategoriaId")
                         .HasColumnType("bigint")
                         .HasColumnName("categoria_id");
 
                     b.Property<int?>("PlazoDiasHabiles")
-                        .HasColumnType("int")
+                        .HasColumnType("integer")
                         .HasColumnName("plazo_dias_habiles");
 
                     b.Property<int?>("PlazoHoras")
-                        .HasColumnType("int")
+                        .HasColumnType("integer")
                         .HasColumnName("plazo_horas");
 
                     b.Property<string>("Prioridad")
                         .IsRequired()
                         .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)")
+                        .HasColumnType("character varying(10)")
                         .HasColumnName("prioridad");
 
                     b.Property<DateOnly>("VigenteDesde")
@@ -657,40 +584,6 @@ namespace Fixa.Api.Infraestructura.Datos.MigracionesSqlServer
                     b.HasIndex(new[] { "CategoriaId" }, "metas_atencion_categoria_id_index");
 
                     b.ToTable("metas_atencion", (string)null);
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1L,
-                            CategoriaId = 1L,
-                            PlazoHoras = 72,
-                            Prioridad = "alta",
-                            VigenteDesde = new DateOnly(2026, 1, 1)
-                        },
-                        new
-                        {
-                            Id = 2L,
-                            CategoriaId = 1L,
-                            PlazoDiasHabiles = 5,
-                            Prioridad = "media",
-                            VigenteDesde = new DateOnly(2026, 1, 1)
-                        },
-                        new
-                        {
-                            Id = 3L,
-                            CategoriaId = 2L,
-                            PlazoHoras = 48,
-                            Prioridad = "alta",
-                            VigenteDesde = new DateOnly(2026, 1, 1)
-                        },
-                        new
-                        {
-                            Id = 4L,
-                            CategoriaId = 3L,
-                            PlazoDiasHabiles = 3,
-                            Prioridad = "media",
-                            VigenteDesde = new DateOnly(2026, 1, 1)
-                        });
                 });
 
             modelBuilder.Entity("Fixa.Api.Dominio.Entidades.Notificacion", b =>
@@ -700,24 +593,24 @@ namespace Fixa.Api.Infraestructura.Datos.MigracionesSqlServer
                         .HasColumnType("bigint")
                         .HasColumnName("id");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
                     b.Property<string>("Canal")
                         .IsRequired()
                         .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)")
+                        .HasColumnType("character varying(10)")
                         .HasColumnName("canal");
 
                     b.Property<string>("Destino")
                         .IsRequired()
                         .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)")
+                        .HasColumnType("character varying(255)")
                         .HasColumnName("destino");
 
                     b.Property<string>("EstadoEntrega")
                         .IsRequired()
                         .HasMaxLength(15)
-                        .HasColumnType("nvarchar(15)")
+                        .HasColumnType("character varying(15)")
                         .HasColumnName("estado_entrega");
 
                     b.Property<long>("EventoId")
@@ -725,7 +618,7 @@ namespace Fixa.Api.Infraestructura.Datos.MigracionesSqlServer
                         .HasColumnName("evento_id");
 
                     b.Property<DateTime?>("FechaEnvio")
-                        .HasColumnType("datetime2(0)")
+                        .HasColumnType("timestamp(0) without time zone")
                         .HasColumnName("fecha_envio");
 
                     b.Property<long>("ReporteId")
@@ -742,6 +635,142 @@ namespace Fixa.Api.Infraestructura.Datos.MigracionesSqlServer
                     b.ToTable("notificaciones", (string)null);
                 });
 
+            modelBuilder.Entity("Fixa.Api.Dominio.Entidades.PlantillaNotificacion", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<bool>("Activa")
+                        .HasColumnType("boolean")
+                        .HasColumnName("activa");
+
+                    b.Property<string>("Cuerpo")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("cuerpo");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasMaxLength(25)
+                        .HasColumnType("character varying(25)")
+                        .HasColumnName("estado");
+
+                    b.Property<DateTime>("FechaActualizacion")
+                        .HasColumnType("timestamp(0) without time zone")
+                        .HasColumnName("fecha_actualizacion");
+
+                    b.Property<string>("Titulo")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)")
+                        .HasColumnName("titulo");
+
+                    b.HasKey("Id")
+                        .HasName("plantillas_notificacion_pkey");
+
+                    b.HasIndex(new[] { "Estado" }, "plantillas_notificacion_estado_unique")
+                        .IsUnique();
+
+                    b.ToTable("plantillas_notificacion", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1L,
+                            Activa = true,
+                            Cuerpo = "Recibimos tu reporte {codigo}. Te avisaremos cuando avance.",
+                            Estado = "recibida",
+                            FechaActualizacion = new DateTime(2026, 11, 27, 8, 0, 0, 0, DateTimeKind.Unspecified),
+                            Titulo = "FIXA: tu reporte cambió de estado"
+                        },
+                        new
+                        {
+                            Id = 2L,
+                            Activa = true,
+                            Cuerpo = "Tu reporte {codigo} está en revisión por la unidad responsable.",
+                            Estado = "en_revision",
+                            FechaActualizacion = new DateTime(2026, 11, 27, 8, 0, 0, 0, DateTimeKind.Unspecified),
+                            Titulo = "FIXA: tu reporte cambió de estado"
+                        },
+                        new
+                        {
+                            Id = 3L,
+                            Activa = true,
+                            Cuerpo = "Tu reporte {codigo} fue asignado a la unidad que lo atenderá.",
+                            Estado = "asignada",
+                            FechaActualizacion = new DateTime(2026, 11, 27, 8, 0, 0, 0, DateTimeKind.Unspecified),
+                            Titulo = "FIXA: tu reporte cambió de estado"
+                        },
+                        new
+                        {
+                            Id = 4L,
+                            Activa = true,
+                            Cuerpo = "Tu reporte {codigo} ya tiene una cuadrilla y una fecha de atención.",
+                            Estado = "programada",
+                            FechaActualizacion = new DateTime(2026, 11, 27, 8, 0, 0, 0, DateTimeKind.Unspecified),
+                            Titulo = "FIXA: tu reporte cambió de estado"
+                        },
+                        new
+                        {
+                            Id = 5L,
+                            Activa = true,
+                            Cuerpo = "Una cuadrilla está atendiendo tu reporte {codigo}.",
+                            Estado = "en_atencion",
+                            FechaActualizacion = new DateTime(2026, 11, 27, 8, 0, 0, 0, DateTimeKind.Unspecified),
+                            Titulo = "FIXA: tu reporte cambió de estado"
+                        },
+                        new
+                        {
+                            Id = 6L,
+                            Activa = true,
+                            Cuerpo = "El trabajo de tu reporte {codigo} se está verificando.",
+                            Estado = "pendiente_validacion",
+                            FechaActualizacion = new DateTime(2026, 11, 27, 8, 0, 0, 0, DateTimeKind.Unspecified),
+                            Titulo = "FIXA: tu reporte cambió de estado"
+                        },
+                        new
+                        {
+                            Id = 7L,
+                            Activa = true,
+                            Cuerpo = "Tu reporte {codigo} fue atendido. Confirma en la app si quedaste conforme.",
+                            Estado = "cerrada",
+                            FechaActualizacion = new DateTime(2026, 11, 27, 8, 0, 0, 0, DateTimeKind.Unspecified),
+                            Titulo = "FIXA: tu reporte cambió de estado"
+                        },
+                        new
+                        {
+                            Id = 8L,
+                            Activa = true,
+                            Cuerpo = "Tu reporte {codigo} no pudo ser atendido. Revisa el motivo en la app.",
+                            Estado = "rechazada",
+                            FechaActualizacion = new DateTime(2026, 11, 27, 8, 0, 0, 0, DateTimeKind.Unspecified),
+                            Titulo = "FIXA: tu reporte cambió de estado"
+                        },
+                        new
+                        {
+                            Id = 9L,
+                            Activa = true,
+                            Cuerpo = "Tu reporte {codigo} se unió a otro caso del mismo problema.",
+                            Estado = "duplicada",
+                            FechaActualizacion = new DateTime(2026, 11, 27, 8, 0, 0, 0, DateTimeKind.Unspecified),
+                            Titulo = "FIXA: tu reporte cambió de estado"
+                        },
+                        new
+                        {
+                            Id = 10L,
+                            Activa = true,
+                            Cuerpo = "Tu reporte {codigo} fue derivado a la entidad que corresponde.",
+                            Estado = "derivada",
+                            FechaActualizacion = new DateTime(2026, 11, 27, 8, 0, 0, 0, DateTimeKind.Unspecified),
+                            Titulo = "FIXA: tu reporte cambió de estado"
+                        });
+                });
+
             modelBuilder.Entity("Fixa.Api.Dominio.Entidades.Programacion", b =>
                 {
                     b.Property<long>("Id")
@@ -749,7 +778,7 @@ namespace Fixa.Api.Infraestructura.Datos.MigracionesSqlServer
                         .HasColumnType("bigint")
                         .HasColumnName("id");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
                     b.Property<long>("CasoId")
                         .HasColumnType("bigint")
@@ -765,12 +794,12 @@ namespace Fixa.Api.Infraestructura.Datos.MigracionesSqlServer
 
                     b.Property<string>("MotivoReprogramacion")
                         .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)")
+                        .HasColumnType("character varying(200)")
                         .HasColumnName("motivo_reprogramacion");
 
                     b.Property<bool>("Vigente")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
+                        .HasColumnType("boolean")
                         .HasDefaultValue(true)
                         .HasColumnName("vigente");
 
@@ -791,12 +820,12 @@ namespace Fixa.Api.Infraestructura.Datos.MigracionesSqlServer
                         .HasColumnType("bigint")
                         .HasColumnName("id");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
                     b.Property<string>("CanalOrigen")
                         .IsRequired()
                         .HasMaxLength(25)
-                        .HasColumnType("nvarchar(25)")
+                        .HasColumnType("character varying(25)")
                         .HasColumnName("canal_origen");
 
                     b.Property<long>("CasoId")
@@ -806,43 +835,43 @@ namespace Fixa.Api.Infraestructura.Datos.MigracionesSqlServer
                     b.Property<string>("ClaveHash")
                         .IsRequired()
                         .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)")
+                        .HasColumnType("character varying(255)")
                         .HasColumnName("clave_hash");
 
                     b.Property<string>("ClaveIdempotencia")
                         .IsRequired()
                         .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)")
+                        .HasColumnType("character varying(64)")
                         .HasColumnName("clave_idempotencia");
 
                     b.Property<string>("Codigo")
                         .IsRequired()
                         .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)")
+                        .HasColumnType("character varying(20)")
                         .HasColumnName("codigo");
 
                     b.Property<string>("CodigoAvisoCobranza")
                         .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)")
+                        .HasColumnType("character varying(30)")
                         .HasColumnName("codigo_aviso_cobranza");
 
                     b.Property<bool?>("Conformidad")
-                        .HasColumnType("bit")
+                        .HasColumnType("boolean")
                         .HasColumnName("conformidad");
 
                     b.Property<string>("CorreoContacto")
                         .HasMaxLength(120)
-                        .HasColumnType("nvarchar(120)")
+                        .HasColumnType("character varying(120)")
                         .HasColumnName("correo_contacto");
 
                     b.Property<string>("Descripcion")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("text")
                         .HasColumnName("descripcion");
 
                     b.Property<string>("Direccion")
                         .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)")
+                        .HasColumnType("character varying(200)")
                         .HasColumnName("direccion");
 
                     b.Property<long>("DistritoId")
@@ -850,26 +879,26 @@ namespace Fixa.Api.Infraestructura.Datos.MigracionesSqlServer
                         .HasColumnName("distrito_id");
 
                     b.Property<bool>("EsApoyo")
-                        .HasColumnType("bit")
+                        .HasColumnType("boolean")
                         .HasColumnName("es_apoyo");
 
                     b.Property<DateTime?>("FechaConformidad")
-                        .HasColumnType("datetime2(0)")
+                        .HasColumnType("timestamp(0) without time zone")
                         .HasColumnName("fecha_conformidad");
 
                     b.Property<DateTime>("FechaRegistro")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2(0)")
+                        .HasColumnType("timestamp(0) without time zone")
                         .HasColumnName("fecha_registro")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
                     b.Property<string>("MotivoSinFoto")
                         .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)")
+                        .HasColumnType("character varying(200)")
                         .HasColumnName("motivo_sin_foto");
 
                     b.Property<int?>("NumeroLuminarias")
-                        .HasColumnType("int")
+                        .HasColumnType("integer")
                         .HasColumnName("numero_luminarias");
 
                     b.Property<long?>("OperadorId")
@@ -878,23 +907,23 @@ namespace Fixa.Api.Infraestructura.Datos.MigracionesSqlServer
 
                     b.Property<string>("Referencia")
                         .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)")
+                        .HasColumnType("character varying(200)")
                         .HasColumnName("referencia");
 
                     b.Property<string>("TipoIncidencia")
                         .IsRequired()
                         .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)")
+                        .HasColumnType("character varying(30)")
                         .HasColumnName("tipo_incidencia");
 
                     b.Property<string>("TokenDispositivo")
                         .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)")
+                        .HasColumnType("character varying(255)")
                         .HasColumnName("token_dispositivo");
 
                     b.Property<Point>("Ubicacion")
                         .IsRequired()
-                        .HasColumnType("geography")
+                        .HasColumnType("geometry(Point,4326)")
                         .HasColumnName("ubicacion");
 
                     b.HasKey("Id")
@@ -912,6 +941,10 @@ namespace Fixa.Api.Infraestructura.Datos.MigracionesSqlServer
 
                     b.HasIndex(new[] { "OperadorId" }, "reportes_operador_id_index");
 
+                    b.HasIndex(new[] { "Ubicacion" }, "reportes_ubicacion_spatialindex");
+
+                    NpgsqlIndexBuilderExtensions.HasMethod(b.HasIndex(new[] { "Ubicacion" }, "reportes_ubicacion_spatialindex"), "gist");
+
                     b.ToTable("reportes", (string)null);
                 });
 
@@ -922,27 +955,27 @@ namespace Fixa.Api.Infraestructura.Datos.MigracionesSqlServer
                         .HasColumnType("bigint")
                         .HasColumnName("id");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
                     b.Property<string>("Estado")
                         .IsRequired()
                         .HasMaxLength(15)
-                        .HasColumnType("nvarchar(15)")
+                        .HasColumnType("character varying(15)")
                         .HasColumnName("estado");
 
                     b.Property<DateTime?>("FechaResolucion")
-                        .HasColumnType("datetime2(0)")
+                        .HasColumnType("timestamp(0) without time zone")
                         .HasColumnName("fecha_resolucion");
 
                     b.Property<DateTime>("FechaSolicitud")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2(0)")
+                        .HasColumnType("timestamp(0) without time zone")
                         .HasColumnName("fecha_solicitud")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
                     b.Property<string>("Motivo")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("text")
                         .HasColumnName("motivo");
 
                     b.Property<long>("ReporteId")
@@ -950,7 +983,7 @@ namespace Fixa.Api.Infraestructura.Datos.MigracionesSqlServer
                         .HasColumnName("reporte_id");
 
                     b.Property<string>("Respuesta")
-                        .HasColumnType("nvarchar(max)")
+                        .HasColumnType("text")
                         .HasColumnName("respuesta");
 
                     b.Property<long?>("SupervisorId")
@@ -974,18 +1007,18 @@ namespace Fixa.Api.Infraestructura.Datos.MigracionesSqlServer
                         .HasColumnType("bigint")
                         .HasColumnName("id");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
                     b.Property<string>("Nombre")
                         .IsRequired()
                         .HasMaxLength(120)
-                        .HasColumnType("nvarchar(120)")
+                        .HasColumnType("character varying(120)")
                         .HasColumnName("nombre");
 
                     b.Property<string>("Sigla")
                         .IsRequired()
                         .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)")
+                        .HasColumnType("character varying(20)")
                         .HasColumnName("sigla");
 
                     b.HasKey("Id")
@@ -995,26 +1028,6 @@ namespace Fixa.Api.Infraestructura.Datos.MigracionesSqlServer
                         .IsUnique();
 
                     b.ToTable("unidades_responsables", (string)null);
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1L,
-                            Nombre = "Secretaría de Obras Públicas (vialidad)",
-                            Sigla = "SMOP"
-                        },
-                        new
-                        {
-                            Id = 2L,
-                            Nombre = "Dirección de Alumbrado Público",
-                            Sigla = "DAP"
-                        },
-                        new
-                        {
-                            Id = 3L,
-                            Nombre = "Empresa Municipal de Aseo",
-                            Sigla = "EMACRUZ"
-                        });
                 });
 
             modelBuilder.Entity("Fixa.Api.Dominio.Entidades.Usuario", b =>
@@ -1024,38 +1037,38 @@ namespace Fixa.Api.Infraestructura.Datos.MigracionesSqlServer
                         .HasColumnType("bigint")
                         .HasColumnName("id");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
                     b.Property<bool>("Activo")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
+                        .HasColumnType("boolean")
                         .HasDefaultValue(true)
                         .HasColumnName("activo");
 
                     b.Property<string>("Apellidos")
                         .IsRequired()
                         .HasMaxLength(80)
-                        .HasColumnType("nvarchar(80)")
+                        .HasColumnType("character varying(80)")
                         .HasColumnName("apellidos");
 
                     b.Property<string>("Cargo")
                         .HasMaxLength(80)
-                        .HasColumnType("nvarchar(80)")
+                        .HasColumnType("character varying(80)")
                         .HasColumnName("cargo");
 
                     b.Property<DateTime?>("Codigo2faExpira")
-                        .HasColumnType("datetime2(0)")
+                        .HasColumnType("timestamp(0) without time zone")
                         .HasColumnName("codigo_2fa_expira");
 
                     b.Property<string>("Codigo2faHash")
                         .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)")
+                        .HasColumnType("character varying(255)")
                         .HasColumnName("codigo_2fa_hash");
 
                     b.Property<string>("Correo")
                         .IsRequired()
                         .HasMaxLength(120)
-                        .HasColumnType("nvarchar(120)")
+                        .HasColumnType("character varying(120)")
                         .HasColumnName("correo");
 
                     b.Property<long?>("CuadrillaId")
@@ -1064,7 +1077,7 @@ namespace Fixa.Api.Infraestructura.Datos.MigracionesSqlServer
 
                     b.Property<bool>("DebeRegistrarPassword")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
+                        .HasColumnType("boolean")
                         .HasDefaultValue(true)
                         .HasColumnName("debe_registrar_password");
 
@@ -1074,53 +1087,53 @@ namespace Fixa.Api.Infraestructura.Datos.MigracionesSqlServer
 
                     b.Property<string>("Especialidad")
                         .HasMaxLength(80)
-                        .HasColumnType("nvarchar(80)")
+                        .HasColumnType("character varying(80)")
                         .HasColumnName("especialidad");
 
                     b.Property<DateTime>("FechaCreacion")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2(0)")
+                        .HasColumnType("timestamp(0) without time zone")
                         .HasColumnName("fecha_creacion")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
                     b.Property<string>("Nombres")
                         .IsRequired()
                         .HasMaxLength(80)
-                        .HasColumnType("nvarchar(80)")
+                        .HasColumnType("character varying(80)")
                         .HasColumnName("nombres");
 
                     b.Property<string>("PasswordHash")
                         .IsRequired()
                         .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)")
+                        .HasColumnType("character varying(255)")
                         .HasColumnName("password_hash");
 
                     b.Property<string>("PuntoAtencion")
                         .HasMaxLength(80)
-                        .HasColumnType("nvarchar(80)")
+                        .HasColumnType("character varying(80)")
                         .HasColumnName("punto_atencion");
 
                     b.Property<bool>("Requiere2fa")
-                        .HasColumnType("bit")
+                        .HasColumnType("boolean")
                         .HasColumnName("requiere_2fa");
 
-                    b.Property<string>("Tipo")
+                    b.Property<string>("Rol")
                         .IsRequired()
                         .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)")
-                        .HasColumnName("tipo");
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("rol");
 
                     b.Property<DateTime?>("TokenExpira")
-                        .HasColumnType("datetime2(0)")
+                        .HasColumnType("timestamp(0) without time zone")
                         .HasColumnName("token_expira");
 
                     b.Property<string>("TokenRecuperacionHash")
                         .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)")
+                        .HasColumnType("character varying(255)")
                         .HasColumnName("token_recuperacion_hash");
 
                     b.Property<DateTime?>("UltimoAcceso")
-                        .HasColumnType("datetime2(0)")
+                        .HasColumnType("timestamp(0) without time zone")
                         .HasColumnName("ultimo_acceso");
 
                     b.Property<long?>("UnidadId")
@@ -1140,64 +1153,6 @@ namespace Fixa.Api.Infraestructura.Datos.MigracionesSqlServer
                     b.HasIndex(new[] { "UnidadId" }, "usuarios_unidad_id_index");
 
                     b.ToTable("usuarios", (string)null);
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1L,
-                            Activo = true,
-                            Apellidos = "Administradora",
-                            Correo = "admin@fixa.test",
-                            DebeRegistrarPassword = false,
-                            FechaCreacion = new DateTime(2026, 11, 20, 8, 0, 0, 0, DateTimeKind.Unspecified),
-                            Nombres = "Ana",
-                            PasswordHash = "$2a$12$uAa4dbkixagNbb2.EatC9eABiTh9zyYAoE8U9Uj2BIj1KLPI8l.Tq",
-                            Requiere2fa = false,
-                            Tipo = "administrador"
-                        },
-                        new
-                        {
-                            Id = 2L,
-                            Activo = true,
-                            Apellidos = "Supervisor",
-                            Correo = "supervisor@fixa.test",
-                            DebeRegistrarPassword = false,
-                            FechaCreacion = new DateTime(2026, 11, 20, 8, 0, 0, 0, DateTimeKind.Unspecified),
-                            Nombres = "Sergio",
-                            PasswordHash = "$2a$12$uAa4dbkixagNbb2.EatC9eABiTh9zyYAoE8U9Uj2BIj1KLPI8l.Tq",
-                            Requiere2fa = false,
-                            Tipo = "supervisor",
-                            UnidadId = 1L
-                        },
-                        new
-                        {
-                            Id = 3L,
-                            Activo = true,
-                            Apellidos = "Técnica",
-                            Correo = "tecnico@fixa.test",
-                            CuadrillaId = 1L,
-                            DebeRegistrarPassword = false,
-                            FechaCreacion = new DateTime(2026, 11, 20, 8, 0, 0, 0, DateTimeKind.Unspecified),
-                            Nombres = "Teresa",
-                            PasswordHash = "$2a$12$uAa4dbkixagNbb2.EatC9eABiTh9zyYAoE8U9Uj2BIj1KLPI8l.Tq",
-                            Requiere2fa = false,
-                            Tipo = "tecnico",
-                            UnidadId = 1L
-                        },
-                        new
-                        {
-                            Id = 4L,
-                            Activo = true,
-                            Apellidos = "Operador",
-                            Correo = "operador@fixa.test",
-                            DebeRegistrarPassword = false,
-                            DistritoId = 1L,
-                            FechaCreacion = new DateTime(2026, 11, 20, 8, 0, 0, 0, DateTimeKind.Unspecified),
-                            Nombres = "Óscar",
-                            PasswordHash = "$2a$12$uAa4dbkixagNbb2.EatC9eABiTh9zyYAoE8U9Uj2BIj1KLPI8l.Tq",
-                            Requiere2fa = false,
-                            Tipo = "operador"
-                        });
                 });
 
             modelBuilder.Entity("Fixa.Api.Dominio.Entidades.Caso", b =>

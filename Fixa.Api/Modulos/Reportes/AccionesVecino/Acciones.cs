@@ -1,4 +1,5 @@
 using Fixa.Api.Dominio;
+using Fixa.Api.Dtos;
 using Fixa.Api.Infraestructura.Datos;
 using Fixa.Api.Modulos.Casos;
 using Fixa.Api.Modulos.Reportes.Validacion;
@@ -6,9 +7,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Fixa.Api.Modulos.Reportes.AccionesVecino;
 
-public sealed class ConsultarSeguimiento(FixaDbContext db) : AccionDelVecino<object>(db)
+public sealed class ConsultarSeguimiento(FixaDbContext db) : AccionDelVecino<SeguimientoSalida>(db)
 {
-    protected override async Task<object> RealizarAsync(long reporteId, CancellationToken cancelacion)
+    protected override async Task<SeguimientoSalida> RealizarAsync(long reporteId, CancellationToken cancelacion)
     {
         var reporte = await Db.Reportes.AsNoTracking()
             .Where(registro => registro.Id == reporteId)
@@ -25,17 +26,16 @@ public sealed class ConsultarSeguimiento(FixaDbContext db) : AccionDelVecino<obj
                 UltimaActualizacion = registro.Caso.EventosHistorial.Max(evento => (DateTime?)evento.FechaHora),
                 Revision = registro.Caso.Reportes.SelectMany(otro => otro.SolicitudesRevision)
                     .OrderByDescending(solicitud => solicitud.Id)
-                    .Select(solicitud => new { solicitud.Estado, solicitud.Respuesta, solicitud.FechaResolucion })
+                    .Select(solicitud => new RevisionSalida(solicitud.Estado, solicitud.Respuesta, solicitud.FechaResolucion))
                     .FirstOrDefault(),
             })
             .FirstAsync(cancelacion);
 
         var estado = ValoresBd.DesdeBd<EstadoCaso>(reporte.Estado);
         var revisionAbierta = estado == EstadoCaso.Cerrada ? reporte.FechaCierre?.AddDays(GestorCasos.DiasParaRevision) : null;
-        return new
-        {
+        return new SeguimientoSalida(
             reporte.Codigo,
-            estado = estado.Texto(),
+            estado.Texto(),
             reporte.Categoria,
             reporte.Unidad,
             reporte.FechaRegistro,
@@ -43,10 +43,8 @@ public sealed class ConsultarSeguimiento(FixaDbContext db) : AccionDelVecino<obj
             reporte.UltimaActualizacion,
             reporte.EsApoyo,
             reporte.Conformidad,
-
-            revisionDisponibleHasta = revisionAbierta,
-            reporte.Revision,
-        };
+            revisionAbierta,
+            reporte.Revision);
     }
 }
 

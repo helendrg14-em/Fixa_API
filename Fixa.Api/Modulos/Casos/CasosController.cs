@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using Fixa.Api.Dominio;
+using Fixa.Api.Dtos;
 using Fixa.Api.Infraestructura.Datos;
 using Fixa.Api.Modulos.Auth;
 using Microsoft.AspNetCore.Authorization;
@@ -7,15 +8,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace Fixa.Api.Modulos.Casos;
-
-public record SolicitudEstado([Required, StringLength(25)] string Estado, [StringLength(1000)] string? Motivo);
-public record SolicitudPrioridad([Required, StringLength(10)] string Prioridad, [Required, StringLength(1000, MinimumLength = 10)] string Justificacion);
-public record SolicitudProgramacion([Range(1, long.MaxValue)] long CuadrillaId, [Required] DateOnly? Fecha, [StringLength(200)] string? MotivoReprogramacion);
-public record SolicitudDerivacion([Range(1, long.MaxValue)] long EntidadId, [Required, StringLength(1000)] string Motivo);
-public record SolicitudValidacion(bool Aprobar, [StringLength(1000)] string? Observacion);
-public record SolicitudCategoria([Required, StringLength(20)] string Categoria, [Required, StringLength(1000, MinimumLength = 10)] string Motivo);
-public record SolicitudVinculacion([Range(1, long.MaxValue)] long CasoPrincipalId, [StringLength(1000)] string? Motivo);
-public record SolicitudRespuestaRevision(bool Aceptar, [StringLength(1000)] string? Respuesta);
 
 /// <summary>
 /// Gestión de casos del supervisor (solo su unidad) y del administrador (todas). Cada acción delega en la fachada
@@ -39,7 +31,7 @@ public class CasosController(FixaDbContext db, GestorCasos gestor, ControlVencim
 
     // GET /api/v1/panel/casos?estado=en_revision&pagina=1
     [HttpGet]
-    public async Task<IActionResult> Bandeja(string? estado, [Range(1, 1000)] int pagina = 1, CancellationToken cancelacion = default)
+    public async Task<ActionResult<List<CasoResumen>>> Bandeja(string? estado, [Range(1, 1000)] int pagina = 1, CancellationToken cancelacion = default)
     {
         await vencimientos.MarcarAsync(cancelacion); // la bandeja siempre muestra los vencidos al día
         var unidad = await UnidadAsync(cancelacion);
@@ -55,36 +47,34 @@ public class CasosController(FixaDbContext db, GestorCasos gestor, ControlVencim
         var casos = await consulta
             .OrderByDescending(c => c.Vencido).ThenBy(c => c.FechaObjetivo).ThenBy(c => c.Id)
             .Skip((pagina - 1) * TamanoPagina).Take(TamanoPagina)
-            .Select(c => new { c.Id, c.Estado, c.Prioridad, categoria = c.Categoria.Nombre, c.FechaCreacion, c.FechaObjetivo, c.Vencido, reportes = c.Reportes.Count })
+            .Select(c => new CasoResumen(c.Id, c.Estado, c.Prioridad, c.Categoria.Nombre, c.FechaCreacion, c.FechaObjetivo, c.Vencido, c.Reportes.Count))
             .ToListAsync(cancelacion);
-        return Ok(casos);
+        return casos;
     }
 
     // GET /api/v1/panel/casos/5
     [HttpGet("{id:long}")]
-    public async Task<IActionResult> Detalle(long id, CancellationToken cancelacion)
+    public async Task<ActionResult<CasoDetalle>> Detalle(long id, CancellationToken cancelacion)
     {
         var unidad = await UnidadAsync(cancelacion);
         var esAdmin = EsAdministrador;
         var caso = await db.Casos.AsNoTracking()
             .Where(c => c.Id == id && (esAdmin || (unidad != null && c.UnidadId == unidad)))
-            .Select(c => new
-            {
+            .Select(c => new CasoDetalle(
                 c.Id, c.Estado, c.Prioridad, c.JustificacionPrioridad, c.FechaCreacion, c.FechaObjetivo, c.FechaCierre, c.Vencido,
                 c.RequiereVerificacionCampo,
-                categoria = c.Categoria.Nombre,
+                c.Categoria.Nombre,
                 // Sin correo, token ni clave del vecino: el panel no necesita sus datos de contacto (RNF-05).
-                reportes = c.Reportes.Select(r => new
-                {
+                c.Reportes.Select(r => new ReporteDelCaso(
                     r.Codigo, r.TipoIncidencia, r.Descripcion, r.Direccion, r.Referencia, r.NumeroLuminarias, r.EsApoyo, r.FechaRegistro,
-                    latitud = r.Ubicacion.Y, longitud = r.Ubicacion.X,
-                    fotos = r.FotosReporte.Select(f => f.Url),
-                }),
-                historial = c.EventosHistorial.OrderBy(e => e.FechaHora).Select(e => new { e.FechaHora, e.Tipo, e.EstadoAnterior, e.EstadoNuevo, e.Detalle, e.Motivo }),
-                intervenciones = c.Intervenciones.Select(i => new { i.Id, i.Fecha, i.TrabajoRealizado, i.EstadoValidacion, evidencias = i.Evidencias.Select(e => new { e.Tipo, e.Url }) }),
-            })
+                    r.Ubicacion.Y, r.Ubicacion.X,
+                    r.FotosReporte.Select(f => f.Url).ToList())).ToList(),
+                c.EventosHistorial.OrderBy(e => e.FechaHora)
+                    .Select(e => new EventoDelCaso(e.FechaHora, e.Tipo, e.EstadoAnterior, e.EstadoNuevo, e.Detalle, e.Motivo)).ToList(),
+                c.Intervenciones.Select(i => new IntervencionDelCaso(i.Id, i.Fecha, i.TrabajoRealizado, i.EstadoValidacion,
+                    i.Evidencias.Select(e => new EvidenciaSalida(e.Tipo, e.Url)).ToList())).ToList()))
             .FirstOrDefaultAsync(cancelacion);
-        return caso is null ? throw new NoEncontradoException("El caso no existe o no es de tu unidad.") : Ok(caso);
+        return caso ?? throw new NoEncontradoException("El caso no existe o no es de tu unidad.");
     }
 
     // PATCH /api/v1/panel/casos/5/estado
@@ -135,22 +125,33 @@ public class CasosController(FixaDbContext db, GestorCasos gestor, ControlVencim
 
     // GET /api/v1/panel/casos/5/cercanos  (posibles duplicados: misma categoría, abiertos, dentro del radio de la categoría)
     [HttpGet("{id:long}/cercanos")]
-    public async Task<IActionResult> Cercanos(long id, CancellationToken cancelacion)
+    public async Task<ActionResult<List<CasoCercano>>> Cercanos(long id, CancellationToken cancelacion)
     {
         var unidad = await UnidadAsync(cancelacion);
         var esAdmin = EsAdministrador;
         if (!await db.Casos.AnyAsync(c => c.Id == id && (esAdmin || (unidad != null && c.UnidadId == unidad)), cancelacion))
             throw new NoEncontradoException("El caso no existe o no es de tu unidad.");
 
-        // Distancia en metros; el radio sale de categorias.radio_cercania_m.
-        var ids = await db.Consultas.CasosCercanosAlCasoAsync(id, cancelacion);
+        // ST_DWithin con geography mide en metros; el radio sale de categorias.radio_cercania_m.
+        var ids = await db.Database.SqlQuery<long>($"""
+            SELECT DISTINCT otro.caso_id AS "Value"
+            FROM reportes propio
+            JOIN casos caso ON caso.id = propio.caso_id
+            JOIN categorias cat ON cat.id = caso.categoria_id
+            JOIN reportes otro ON otro.caso_id <> propio.caso_id
+            JOIN casos candidato ON candidato.id = otro.caso_id
+            WHERE propio.caso_id = {id}
+              AND candidato.categoria_id = caso.categoria_id
+              AND candidato.estado <> ALL({EstadoCasoReglas.FinalesBd})
+              AND ST_DWithin(propio.ubicacion::geography, otro.ubicacion::geography, cat.radio_cercania_m)
+            """).ToListAsync(cancelacion);
 
         var cercanos = await db.Casos.AsNoTracking()
             .Where(c => ids.Contains(c.Id))
             .OrderBy(c => c.FechaCreacion)
-            .Select(c => new { c.Id, c.Estado, c.Prioridad, c.FechaCreacion, reportes = c.Reportes.Count })
+            .Select(c => new CasoCercano(c.Id, c.Estado, c.Prioridad, c.FechaCreacion, c.Reportes.Count))
             .ToListAsync(cancelacion);
-        return Ok(cercanos);
+        return cercanos;
     }
 
     // POST /api/v1/panel/casos/5/vinculacion  (el caso 5 es duplicado del caso principal)
@@ -163,16 +164,16 @@ public class CasosController(FixaDbContext db, GestorCasos gestor, ControlVencim
 
     // GET /api/v1/panel/casos/revisiones  (solicitudes de revisión pendientes de su unidad)
     [HttpGet("revisiones")]
-    public async Task<IActionResult> Revisiones(CancellationToken cancelacion)
+    public async Task<ActionResult<List<RevisionPendiente>>> Revisiones(CancellationToken cancelacion)
     {
         var unidad = await UnidadAsync(cancelacion);
         var esAdmin = EsAdministrador;
         var pendientes = await db.SolicitudesRevision.AsNoTracking()
             .Where(s => s.Estado == EstadoResolucion.Pendiente.ABd() && (esAdmin || (unidad != null && s.Reporte.Caso.UnidadId == unidad)))
             .OrderBy(s => s.FechaSolicitud)
-            .Select(s => new { s.Id, casoId = s.Reporte.CasoId, s.Reporte.Codigo, s.Motivo, s.FechaSolicitud, s.Reporte.Caso.FechaCierre })
+            .Select(s => new RevisionPendiente(s.Id, s.Reporte.CasoId, s.Reporte.Codigo, s.Motivo, s.FechaSolicitud, s.Reporte.Caso.FechaCierre))
             .ToListAsync(cancelacion);
-        return Ok(pendientes);
+        return pendientes;
     }
 
     // POST /api/v1/panel/casos/revisiones/3  (aceptar reabre el caso; no aceptar exige respuesta)

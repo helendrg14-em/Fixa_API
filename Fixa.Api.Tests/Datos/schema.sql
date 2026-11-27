@@ -844,7 +844,7 @@ ALTER SEQUENCE public.unidades_responsables_id_seq OWNED BY public.unidades_resp
 
 CREATE TABLE public.usuarios (
     id bigint NOT NULL,
-    tipo character varying(20) NOT NULL,
+    rol character varying(20) NOT NULL,
     nombres character varying(80) NOT NULL,
     apellidos character varying(80) NOT NULL,
     correo character varying(120) NOT NULL,
@@ -864,7 +864,7 @@ CREATE TABLE public.usuarios (
     unidad_id bigint,
     especialidad character varying(80),
     cuadrilla_id bigint,
-    CONSTRAINT usuarios_tipo_check CHECK (((tipo)::text = ANY ((ARRAY['administrador'::character varying, 'supervisor'::character varying, 'tecnico'::character varying, 'operador'::character varying])::text[])))
+    CONSTRAINT usuarios_rol_check CHECK (((rol)::text = ANY ((ARRAY['administrador'::character varying, 'supervisor'::character varying, 'tecnico'::character varying, 'operador'::character varying])::text[])))
 );
 
 

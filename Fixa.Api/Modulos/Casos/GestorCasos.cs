@@ -92,7 +92,7 @@ public sealed class GestorCasos(
         {
             if (principalId == caso.Id)
                 throw new ReglaNegocioException("Un caso no puede ser duplicado de sí mismo.");
-            var principal = await db.Consultas.BloquearCasoAsync(principalId, cancelacion)
+            var principal = await db.Casos.FromSql($"SELECT * FROM casos WHERE id = {principalId} FOR UPDATE").FirstOrDefaultAsync(cancelacion)
                 ?? throw new ReglaNegocioException("El caso principal no existe.");
             if (principal.UnidadId != caso.UnidadId || principal.CategoriaId != caso.CategoriaId)
                 throw new ReglaNegocioException("El caso principal debe ser de la misma categoría y unidad.");
@@ -333,8 +333,8 @@ public sealed class GestorCasos(
         long casoId, long? usuarioId, Permiso permitido, CancellationToken cancelacion, Func<Caso, Task<EventoHistorial>> operacion)
     {
         await using var transaccion = await db.Database.BeginTransactionAsync(cancelacion);
-        // Fila bloqueada: dos personas no pueden cambiar el mismo caso a la vez.
-        var caso = await db.Consultas.BloquearCasoAsync(casoId, cancelacion);
+        // FOR UPDATE: dos personas no pueden cambiar el mismo caso a la vez.
+        var caso = await db.Casos.FromSql($"SELECT * FROM casos WHERE id = {casoId} FOR UPDATE").FirstOrDefaultAsync(cancelacion);
         if (caso is null || !await permitido(caso.Id, cancelacion))
             throw new NoEncontradoException("El caso no existe o no te corresponde.");
 
@@ -362,7 +362,7 @@ public sealed class GestorCasos(
     /// </summary>
     private Permiso DeSuUnidad(long usuarioId) => (casoId, cancelacion) =>
         db.Casos.AnyAsync(c => c.Id == casoId && db.Usuarios.Any(u => u.Id == usuarioId && u.Activo
-            && (u.Tipo == Roles.Administrador || (u.UnidadId != null && u.UnidadId == c.UnidadId))), cancelacion);
+            && (u.Rol == Roles.Administrador || (u.UnidadId != null && u.UnidadId == c.UnidadId))), cancelacion);
 
     /// <summary>El técnico solo trabaja casos programados para su cuadrilla.</summary>
     private Permiso DeSuCuadrilla(long tecnicoId) => (casoId, cancelacion) =>

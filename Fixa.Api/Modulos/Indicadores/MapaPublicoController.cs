@@ -1,3 +1,4 @@
+using Fixa.Api.Dtos;
 using Fixa.Api.Infraestructura.Seguridad;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -14,6 +15,6 @@ public class MapaPublicoController(ConsultaIndicadores consulta) : ControllerBas
     // GET /api/v1/publico/mapa?categoria=bache&desde=2026-10-01
     [HttpGet]
     [EnableRateLimiting(Limites.Consulta)]
-    public async Task<IActionResult> Mapa([FromQuery] FiltroIndicadores filtro, CancellationToken cancelacion) =>
-        Ok(await consulta.MapaAsync(filtro, unidadId: null, publico: true, cancelacion));
+    public async Task<ActionResult<MapaSalida>> Mapa([FromQuery] FiltroIndicadores filtro, CancellationToken cancelacion) =>
+        await consulta.MapaAsync(filtro, unidadId: null, publico: true, cancelacion);
 }

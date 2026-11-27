@@ -48,8 +48,30 @@ public class CasosPublicoController(FixaDbContext db) : ControllerBase
         var latitud = filtro.Latitud!.Value;
         var longitud = filtro.Longitud!.Value;
 
-        // El radio en metros sale de categorias.radio_cercania_m.
-        var filas = await db.Consultas.CasosCercanosAlPuntoAsync(categoriaBd, longitud, latitud, MaximoResultados, cancelacion);
+        // Consulta con parámetros (FormattableString): los valores nunca se pegan como texto SQL.
+        // El radio en metros sale de categorias.radio_cercania_m; ST_DWithin con geography mide en metros.
+        var filas = await db.Database.SqlQuery<CasoCercanoFila>($"""
+            SELECT caso.id AS "CasoId",
+                   caso.estado AS "Estado",
+                   caso.fecha_creacion AS "FechaCreacion",
+                   (SELECT original.tipo_incidencia FROM reportes original
+                     WHERE original.caso_id = caso.id ORDER BY original.es_apoyo, original.id LIMIT 1) AS "TipoIncidencia",
+                   MIN(ST_Distance(reporte.ubicacion::geography,
+                                   ST_SetSRID(ST_MakePoint({longitud}, {latitud}), 4326)::geography)) AS "DistanciaMetros",
+                   (SELECT count(*) FROM reportes todos WHERE todos.caso_id = caso.id)::int AS "Reportes"
+            FROM casos caso
+            JOIN categorias categoria ON categoria.id = caso.categoria_id
+            JOIN reportes reporte ON reporte.caso_id = caso.id
+            WHERE categoria.codigo = {categoriaBd}
+              AND categoria.activa
+              AND caso.estado <> ALL({EstadoCasoReglas.FinalesBd})
+              AND ST_DWithin(reporte.ubicacion::geography,
+                             ST_SetSRID(ST_MakePoint({longitud}, {latitud}), 4326)::geography,
+                             categoria.radio_cercania_m)
+            GROUP BY caso.id
+            ORDER BY "DistanciaMetros"
+            LIMIT {MaximoResultados}
+            """).ToListAsync(cancelacion);
 
         var tiposDeLaCategoria = CreadorCategoria.Para(categoria).Tipos();
         var cercanos = filas.Select(fila => new
